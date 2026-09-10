@@ -21,6 +21,15 @@ Promise — значення, якого ще немає: pending → fulfilled 
 
 У грі не можна `while (!image.complete) {}` — це Lab 1. Треба чекати без блокування: спрайти, звук, лобі.
 
+```mermaid
+stateDiagram-v2
+  [*] --> pending
+  pending --> fulfilled: resolve(value)
+  pending --> rejected: reject(reason)
+```
+
+Перехід **один раз**. `.then` завжди йде в мікрочергу, навіть якщо проміс уже `fulfilled`.
+
 ---
 
 ## 1. Порядок: мікрозадача vs лог
@@ -54,6 +63,15 @@ fetch('https://httpbin.org/status/404').then((r) =>
 
 **Очікуй:** проміс **виконався**, `ok false`, `status 404`. Мережа відбулась. Reject — коли запит не вдався (немає хоста, abort). HTTP-помилка — перевіряй `r.ok` сам.
 
+```mermaid
+flowchart TD
+  F[fetch] --> Net{Network succeeded?}
+  Net -->|no| Rej[Promise rejects]
+  Net -->|yes| HTTP{HTTP 2xx?}
+  HTTP -->|404| Ful["Promise fulfills<br/>ok = false"]
+  HTTP -->|200| Ok["Promise fulfills<br/>ok = true"]
+```
+
 ---
 
 ## 3. Послідовно vs `Promise.all`
@@ -72,6 +90,17 @@ console.timeEnd('all')
 ```
 
 Вставляй у консоль на сторінці. Якщо `await` нарікає — обгорни: `(async () => { … })()`. **Очікуй:** seq ~2000 мс, all ~1000 мс. Завантаження спрайтів у грі — `all` (або `allSettled`, якщо один файл може відвалитись, а решту все одно треба показати).
+
+```mermaid
+flowchart TB
+  subgraph seq ["await A then await B ~ 2s"]
+    A1[wait 1s] --> B1[wait 1s]
+  end
+  subgraph par ["Promise.all ~ 1s"]
+    A2[wait 1s]
+    B2[wait 1s]
+  end
+```
 
 ---
 

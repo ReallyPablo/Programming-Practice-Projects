@@ -23,6 +23,24 @@ V8: парсить → байткод → за гарячими функціям
 
 Тести (Vitest, property tests, Playwright) — щоб рефакторинг pooling не зламав фізику.
 
+```mermaid
+flowchart LR
+  Src[Source] --> Parse[Parse]
+  Parse --> BC[Bytecode]
+  BC --> Ignition[Interpreter]
+  Ignition -->|hot function| JIT[JIT]
+  JIT -->|"types changed"| Deopt[Deopt]
+  Deopt --> Ignition
+```
+
+```mermaid
+flowchart TB
+  Main["Main thread<br/>DOM, rAF, input"]
+  Worker["Worker<br/>no DOM"]
+  Main -->|"postMessage / transfer"| Worker
+  Worker --> Main
+```
+
 ---
 
 ## 1. Deopt на очах

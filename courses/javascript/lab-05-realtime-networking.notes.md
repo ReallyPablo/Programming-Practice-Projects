@@ -23,6 +23,28 @@
 
 Симуляція з Lab 1 (фіксований крок, чистий `integrate`) тут обов’язкова: інакше два клієнти роз’їдуться.
 
+```mermaid
+sequenceDiagram
+  participant P as Player
+  participant C as Client
+  participant S as Server
+  P->>C: hold thrust
+  C->>C: predict locally
+  C->>S: input
+  Note over S: authority: simulate
+  S->>C: snapshot
+  C->>C: reconcile if mismatch
+```
+
+Чужого гравця не «малюй останнє»: між двома вже отриманими знімками.
+
+```mermaid
+flowchart LR
+  Prev[previous snapshot] --> Lerp["lerp"]
+  Curr[current snapshot] --> Lerp
+  Lerp --> Draw[draw the other ship]
+```
+
 ---
 
 ## 1. Endianness (порядок байтів у числі)
@@ -75,6 +97,12 @@ console.log('binary bytes', buf.byteLength)
 ```
 
 **Очікуй:** JSON у рази більший. На 30 Hz це вже трафік. Лаба просить порівняти свої реальні знімки.
+
+```mermaid
+flowchart LR
+  AB[ArrayBuffer<br/>raw bytes] --> DV["DataView<br/>mixed types, explicit endian"]
+  AB --> TA["TypedArray<br/>one type, CPU endian"]
+```
 
 ---
 

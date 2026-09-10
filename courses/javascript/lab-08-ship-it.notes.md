@@ -23,6 +23,25 @@
 
 На `SIGTERM` перестати приймати нове, дослати close-кадри, вийти 0 за кілька секунд. Інакше оркестратор (Docker/K8s) шле `SIGKILL`.
 
+```mermaid
+sequenceDiagram
+  participant O as Orchestrator
+  participant N as Node
+  participant C as Clients
+  O->>N: SIGTERM
+  N->>N: stop accepting
+  N->>C: WebSocket close
+  N->>O: exit 0
+  Note over O: if too slow: SIGKILL
+```
+
+```mermaid
+flowchart TD
+  Page{Page is https?}
+  Page -->|yes| WSS["must use wss://"]
+  Page -->|no, localhost http| WS["ws:// is ok"]
+```
+
 ---
 
 ## 1. Сигнал vs Docker CMD

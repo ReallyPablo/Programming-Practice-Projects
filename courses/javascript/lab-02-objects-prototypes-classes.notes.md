@@ -23,6 +23,24 @@
 
 У грі: багато сутностей (корабель, куля, астероїд) ділять `update` / колізії, але не копіюють код. Глибша ієрархія `Entity → Moving → Ship → Player` швидко ламається — краще **композиція** (маленькі шматки поведінки в одному об’єкті).
 
+```mermaid
+flowchart TD
+  b["b = Object.create(a)<br/>no own hello"] -->|"[[Prototype]]"| a["a.hello = 1 then 2"]
+  a -->|"[[Prototype]]"| OP["Object.prototype"]
+  OP -->|"[[Prototype]]"| N["null"]
+```
+
+Пошук `b.hello` іде стрілками вгору, поки не знайде поле або `null`. Копіювання немає.
+
+```mermaid
+flowchart TD
+  Q{"How was the function called?"}
+  Q -->|"new F()"| New["this = the new object"]
+  Q -->|"f.call(obj) / bind"| Explicit["this = obj"]
+  Q -->|"obj.f()"| Implicit["this = obj, left of the dot"]
+  Q -->|"f()"| Default["undefined in strict mode"]
+```
+
 ---
 
 ## 1. Делегація, не копіювання
@@ -73,6 +91,17 @@ console.log(Object.getPrototypeOf(B) === A)
 ```
 
 **Очікуй:** обидва `true`. Екземпляри: `b → B.prototype → A.prototype`. Самі класи (статики): `B → A`.
+
+```mermaid
+flowchart LR
+  subgraph instances ["instances"]
+    inst["new B()"] --> Bp["B.prototype"]
+    Bp --> Ap["A.prototype"]
+  end
+  subgraph ctors ["functions / statics"]
+    B["B"] --> A["A"]
+  end
+```
 
 ---
 

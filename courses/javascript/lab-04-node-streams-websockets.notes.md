@@ -21,6 +21,27 @@
 
 Два стовпи Node: **`EventEmitter`** (усе щось емітить) і **streams** (backpressure: швидкий продюсер не повинен залити пам’ять, коли споживач повільний).
 
+```mermaid
+flowchart LR
+  subgraph node ["Node process"]
+    JS["Your JS<br/>one thread"]
+    UV["libuv<br/>file / DNS thread pool"]
+  end
+  JS -->|"async I/O request"| UV
+  UV -->|"callback in a queue"| JS
+```
+
+Спрощені фази (між ними ще nextTick + мікрозадачі):
+
+```mermaid
+flowchart TD
+  Next["process.nextTick"] --> Micro["Promise microtasks"]
+  Micro --> Timers["timers: setTimeout"]
+  Timers --> Poll["poll: I/O"]
+  Poll --> Check["check: setImmediate"]
+  Check --> Next
+```
+
 ---
 
 ## 1. Фази циклу: що стабільне
@@ -58,6 +79,14 @@ node -e "console.log(Buffer.from('привіт').length, 'привіт'.length);
 ## 4. Backpressure (обережно)
 
 Ідея: `writable.write(chunk)` повертає `false` → треба чекати `'drain'`. Ігноруєш — **RSS** (скільки RAM з’їв процес) росте, поки не вб’є машину.
+
+```mermaid
+flowchart LR
+  Fast[Fast producer] -->|write chunk| W{write returned true?}
+  W -->|yes| Fast
+  W -->|no| Wait["pause, wait for drain"]
+  Wait --> Fast
+```
 
 Мінімально безпечна перевірка: читай у доках `stream.pipeline` і порівняй із циклом `for` + `write` без перевірки повернення. Другий варіант **не лишай крутитись**. У лабі є повний дослід — роби його з лімітом ітерацій або будь готовий `Ctrl+C`.
 

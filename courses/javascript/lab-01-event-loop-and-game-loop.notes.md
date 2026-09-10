@@ -31,35 +31,35 @@ JavaScript у вкладці — **один потік**. Поки функці�
 
 ```mermaid
 flowchart LR
-  subgraph engine ["JS-рушій — один потік"]
-    Stack["Call stack<br/>зараз виконується"]
+  subgraph engine ["JS engine — one thread"]
+    Stack["Call stack<br/>currently running"]
   end
-  subgraph host ["Браузер, не мова"]
+  subgraph host ["Browser, not the language"]
     APIs["Web APIs<br/>setTimeout, DOM, fetch, rAF"]
   end
-  subgraph queues ["Черги"]
-    Micro["Мікрозадачі<br/>Promise.then, queueMicrotask"]
-    Macro["Задачі<br/>таймер, клік, I/O"]
+  subgraph queues ["Queues"]
+    Micro["Microtasks<br/>Promise.then, queueMicrotask"]
+    Macro["Tasks<br/>timer, click, I/O"]
   end
   Stack -->|"setTimeout / fetch"| APIs
-  APIs -->|"час вийшов"| Macro
-  APIs -->|"Promise готовий"| Micro
-  Macro -->|"одна задача"| Stack
-  Micro -->|"усі підряд, до порожньої черги"| Stack
+  APIs -->|"timer fired"| Macro
+  APIs -->|"Promise settled"| Micro
+  Macro -->|"one task"| Stack
+  Micro -->|"drain all, until empty"| Stack
 ```
 
 Один оберт циклу (спрощено, як у доповіді Jake Archibald):
 
 ```mermaid
 flowchart TD
-  Run["Виконуй стек до кінця.<br/>Ніхто не перериває."]
-  Run --> Empty{"Стек порожній?"}
-  Empty -->|"ні"| Run
-  Empty -->|"так"| Drain["Спустоши ВСЮ мікрочергу"]
-  Drain --> Paint{"Браузер малює кадр?"}
-  Paint -->|"так"| RAF["rAF → style → layout → paint"]
-  Paint -->|"ні"| One
-  RAF --> One["Візьми ОДНУ задачу з черги задач"]
+  Run["Run the stack to completion.<br/>Nothing interrupts."]
+  Run --> Empty{"Stack empty?"}
+  Empty -->|"no"| Run
+  Empty -->|"yes"| Drain["Drain the entire microtask queue"]
+  Drain --> Paint{"Browser about to paint?"}
+  Paint -->|"yes"| RAF["rAF → style → layout → paint"]
+  Paint -->|"no"| One
+  RAF --> One["Take ONE task from the task queue"]
   One --> Run
 ```
 
@@ -86,19 +86,19 @@ console.log('4')
 
 ```mermaid
 sequenceDiagram
-  participant Stack as Стек
+  participant Stack as Call stack
   participant APIs as Web APIs
-  participant Micro as Мікрочерга
-  participant Macro as Черга задач
+  participant Micro as Microtask queue
+  participant Macro as Task queue
 
   Stack->>Stack: log 1
   Stack->>APIs: setTimeout 0
-  APIs-->>Macro: колбек log 2
+  APIs-->>Macro: callback log 2
   Stack->>Micro: Promise.then log 3
   Stack->>Stack: log 4
-  Note over Stack: стек порожній
+  Note over Stack: stack empty
   Micro->>Stack: log 3
-  Note over Micro: мікрочерга порожня
+  Note over Micro: microtask queue empty
   Macro->>Stack: log 2
 ```
 
@@ -171,10 +171,10 @@ requestAnimationFrame(tick)
 
 ```mermaid
 flowchart LR
-  Frame["Кадр монітора<br/>rAF"] --> Acc["accumulator += dt<br/>не більше 0.25 с"]
-  Acc --> Sim["поки вистачає на крок:<br/>simulate 1/60"]
+  Frame["Display frame<br/>rAF"] --> Acc["accumulator += dt<br/>clamp 0.25 s"]
+  Acc --> Sim["while enough for a step:<br/>simulate 1/60"]
   Sim --> Draw["render alpha"]
-  Draw --> Hud["HUD: steps/s близько 60<br/>frames/s = герці"]
+  Draw --> Hud["HUD: steps/s ~ 60<br/>frames/s = refresh rate"]
 ```
 
 Кути: звичайний `lerp` між 359° і 1° дає 180° — ніс крутиться навпаки. Треба короткий шлях по колу (`lerpAngle` у лабі / у `render/draw.js`).

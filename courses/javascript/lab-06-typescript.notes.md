@@ -19,6 +19,14 @@
 
 TS стирається до JS. На дроті типів немає. **Структурна** типізація: важлива форма полів, не ім’я класу (на відміну від Java). `any` вимикає перевірку; `unknown` змушує звузити. Повідомлення клієнт ↔ сервер — **discriminated union** (кілька варіантів, поле `type` каже який) + `never` у `default`, щоб нова літера ламала збірку, а не прод.
 
+```mermaid
+flowchart LR
+  TS[TypeScript] -->|"erased"| JS[JavaScript]
+  JS -->|"JSON / binary"| Wire[The wire]
+  Wire --> Unknown["unknown + runtime parse"]
+  Unknown --> Typed["typed Msg union"]
+```
+
 ---
 
 ## 1. Extra property: змінна vs літерал
@@ -71,6 +79,15 @@ function handle(m: Msg) {
 ```
 
 Додай `{ type: 'chat'; text: string }` у union — **Очікуй:** `tsc` підкреслить `never`. Це і є протокол гри.
+
+```mermaid
+flowchart TD
+  Msg{"m.type"}
+  Msg -->|join| Join
+  Msg -->|input| Input
+  Msg -->|ping| Ping
+  Msg -->|"new variant, no case"| Never["never: compile error"]
+```
 
 ---
 
