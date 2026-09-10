@@ -3,7 +3,7 @@
 > "The GIL is not the problem. Your mental model of the GIL is the problem."
 > — every senior Python engineer, eventually
 
-**Weeks:** 9–10 · **Language focus:** `threading`, `multiprocessing`, `concurrent.futures`, the Global Interpreter Lock, CPU-bound vs I/O-bound, free-threaded Python 3.13 · **Project step:** parallel index construction, benchmarked and explained · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 04](lab-04-typing-testing-packaging-cli.md)
+**Weeks:** 9–10 · **Language focus:** `threading`, `multiprocessing`, `concurrent.futures`, the Global Interpreter Lock, CPU-bound vs I/O-bound, free-threaded Python 3.13 · **Project step:** parallel index construction, benchmarked and explained · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 04](lab-04-typing-testing-packaging-cli.md) · **Notes:** [theory + experiments](lab-05-concurrency-and-the-gil.notes.md)
 
 ---
 

@@ -2,7 +2,7 @@
 
 > "Async is not about speed. It's about waiting well."
 
-**Weeks:** 11–12 · **Language focus:** the event loop, coroutines and `await`, tasks, `TaskGroup`, cancellation and timeouts, semaphores and queues, async iterators, `httpx` · **Project step:** a polite, fast, async web crawler that feeds new documents into the corpus · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 05](lab-05-concurrency-and-the-gil.md)
+**Weeks:** 11–12 · **Language focus:** the event loop, coroutines and `await`, tasks, `TaskGroup`, cancellation and timeouts, semaphores and queues, async iterators, `httpx` · **Project step:** a polite, fast, async web crawler that feeds new documents into the corpus · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 05](lab-05-concurrency-and-the-gil.md) · **Notes:** [theory + experiments](lab-06-asyncio-crawler.notes.md)
 
 ---
 

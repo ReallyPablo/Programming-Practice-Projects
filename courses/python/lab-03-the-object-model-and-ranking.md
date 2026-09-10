@@ -3,7 +3,7 @@
 > "Everything is an object, and every object can be taught to behave like a built-in."
 > — the Python data model, paraphrased
 
-**Weeks:** 5–6 · **Language focus:** the data model (dunder methods), properties, protocols and duck typing, closures and decorators, `functools`, context managers · **Project step:** TF-IDF / BM25 ranking, a real query language, snippets, and a clean `Index` API · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 02](lab-02-data-structures-and-the-inverted-index.md)
+**Weeks:** 5–6 · **Language focus:** the data model (dunder methods), properties, protocols and duck typing, closures and decorators, `functools`, context managers · **Project step:** TF-IDF / BM25 ranking, a real query language, snippets, and a clean `Index` API · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 02](lab-02-data-structures-and-the-inverted-index.md) · **Notes:** [theory + experiments](lab-03-the-object-model-and-ranking.notes.md)
 
 ---
 

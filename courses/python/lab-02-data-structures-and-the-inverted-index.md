@@ -3,7 +3,7 @@
 > "Python's dictionaries are stunningly good."
 > — Raymond Hettinger, CPython core developer
 
-**Weeks:** 3–4 · **Language focus:** `dict` and `set` internals, the hashing contract, `collections`, `dataclasses`, `__slots__`, compact storage, serialization · **Project step:** build, persist, and measure the inverted index; answer Boolean queries · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 01](lab-01-iterators-and-the-corpus.md)
+**Weeks:** 3–4 · **Language focus:** `dict` and `set` internals, the hashing contract, `collections`, `dataclasses`, `__slots__`, compact storage, serialization · **Project step:** build, persist, and measure the inverted index; answer Boolean queries · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 01](lab-01-iterators-and-the-corpus.md) · **Notes:** [theory + experiments](lab-02-data-structures-and-the-inverted-index.notes.md)
 
 ---
 

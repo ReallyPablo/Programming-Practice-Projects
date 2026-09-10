@@ -3,7 +3,7 @@
 > "Loop like a native."
 > — Ned Batchelder
 
-**Weeks:** 1–2 · **Language focus:** the iteration protocol, generators, lazy pipelines, `pathlib`, `re`, Unicode text · **Project step:** choose a corpus and stream it into tokens and term statistics in constant memory · **Course:** [Python — Build a Search Engine](README.md)
+**Weeks:** 1–2 · **Language focus:** the iteration protocol, generators, lazy pipelines, `pathlib`, `re`, Unicode text · **Project step:** choose a corpus and stream it into tokens and term statistics in constant memory · **Course:** [Python — Build a Search Engine](README.md) · **Notes:** [theory + experiments](lab-01-iterators-and-the-corpus.notes.md)
 
 ---
 

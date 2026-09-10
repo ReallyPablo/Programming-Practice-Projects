@@ -2,7 +2,7 @@
 
 > "Untested code is broken code you haven't noticed yet. Unpackaged code is a script only you can run."
 
-**Weeks:** 7–8 · **Language focus:** type hints and static checking, `pytest` and property-based testing, `pyproject.toml` and `uv`, entry points, `typer` + `rich`, `logging`, CI · **Project step:** `findex` becomes an installable, typed, tested command-line tool with CI · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 03](lab-03-the-object-model-and-ranking.md)
+**Weeks:** 7–8 · **Language focus:** type hints and static checking, `pytest` and property-based testing, `pyproject.toml` and `uv`, entry points, `typer` + `rich`, `logging`, CI · **Project step:** `findex` becomes an installable, typed, tested command-line tool with CI · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 03](lab-03-the-object-model-and-ranking.md) · **Notes:** [theory + experiments](lab-04-typing-testing-packaging-cli.notes.md)
 
 ---
 

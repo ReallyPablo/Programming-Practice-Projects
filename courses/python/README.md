@@ -37,16 +37,16 @@ flowchart LR
 
 ## The eight labs
 
-| # | Lab | Language focus | What you add to the project |
-|---|---|---|---|
-| 1 | [Streams, Not Lists](lab-01-iterators-and-the-corpus.md) | Iteration protocol, generators, lazy pipelines, `pathlib`, `re`, Unicode | Choose a corpus; stream it into tokens and term statistics in constant memory |
-| 2 | [The Inverted Index](lab-02-data-structures-and-the-inverted-index.md) | `dict`/`set` internals, hashing, `collections`, `dataclasses`, `__slots__`, serialization | Build, persist, and measure the inverted index |
-| 3 | [Ranking and the Object Model](lab-03-the-object-model-and-ranking.md) | Dunder methods, properties, protocols, decorators, `functools`, context managers | TF-IDF/BM25 ranking, a query language (AND/OR/phrase), `@timed`/`@cached` |
-| 4 | [Make It a Real Tool](lab-04-typing-testing-packaging-cli.md) | Type hints + pyright/mypy, `pytest` + Hypothesis, `pyproject.toml`, `uv`, `typer`, `logging` | An installable, tested `findex` CLI |
-| 5 | [Concurrency and the GIL](lab-05-concurrency-and-the-gil.md) | `threading` vs `multiprocessing`, `concurrent.futures`, the GIL, free-threaded Python | Parallel indexing, with benchmarks you can explain |
-| 6 | [The Async Crawler](lab-06-asyncio-crawler.md) | `asyncio`, coroutines, `httpx`, semaphores, rate limiting, retries, structured concurrency | A polite async crawler that feeds the corpus |
-| 7 | [Search on the Web](lab-07-fastapi-web-search.md) | ASGI, FastAPI, Pydantic, dependency injection, background tasks, Docker | A search API + web UI with snippets, live at a public URL |
-| 8 | [Fast, Then Smart](lab-08-performance-and-semantic-search.md) | Profiling (`cProfile`, `py-spy`, Scalene), numpy vectorization, memory; embeddings | Profile and speed up the hot path; optional hybrid keyword + vector search; final polish |
+| # | Lab | Notes | Language focus | What you add to the project |
+|---|---|---|---|---|
+| 1 | [Streams, Not Lists](lab-01-iterators-and-the-corpus.md) | [notes](lab-01-iterators-and-the-corpus.notes.md) | Iteration protocol, generators, lazy pipelines, `pathlib`, `re`, Unicode | Choose a corpus; stream it into tokens and term statistics in constant memory |
+| 2 | [The Inverted Index](lab-02-data-structures-and-the-inverted-index.md) | [notes](lab-02-data-structures-and-the-inverted-index.notes.md) | `dict`/`set` internals, hashing, `collections`, `dataclasses`, `__slots__`, serialization | Build, persist, and measure the inverted index |
+| 3 | [Ranking and the Object Model](lab-03-the-object-model-and-ranking.md) | [notes](lab-03-the-object-model-and-ranking.notes.md) | Dunder methods, properties, protocols, decorators, `functools`, context managers | TF-IDF/BM25 ranking, a query language (AND/OR/phrase), `@timed`/`@cached` |
+| 4 | [Make It a Real Tool](lab-04-typing-testing-packaging-cli.md) | [notes](lab-04-typing-testing-packaging-cli.notes.md) | Type hints + pyright/mypy, `pytest` + Hypothesis, `pyproject.toml`, `uv`, `typer`, `logging` | An installable, tested `findex` CLI |
+| 5 | [Concurrency and the GIL](lab-05-concurrency-and-the-gil.md) | [notes](lab-05-concurrency-and-the-gil.notes.md) | `threading` vs `multiprocessing`, `concurrent.futures`, the GIL, free-threaded Python | Parallel indexing, with benchmarks you can explain |
+| 6 | [The Async Crawler](lab-06-asyncio-crawler.md) | [notes](lab-06-asyncio-crawler.notes.md) | `asyncio`, coroutines, `httpx`, semaphores, rate limiting, retries, structured concurrency | A polite async crawler that feeds the corpus |
+| 7 | [Search on the Web](lab-07-fastapi-web-search.md) | [notes](lab-07-fastapi-web-search.notes.md) | ASGI, FastAPI, Pydantic, dependency injection, background tasks, Docker | A search API + web UI with snippets, live at a public URL |
+| 8 | [Fast, Then Smart](lab-08-performance-and-semantic-search.md) | [notes](lab-08-performance-and-semantic-search.notes.md) | Profiling (`cProfile`, `py-spy`, Scalene), numpy vectorization, memory; embeddings | Profile and speed up the hot path; optional hybrid keyword + vector search; final polish |
 
 Each lab is **two weeks**. The schedule below assumes a 16-week semester with the final week doubling as the showcase.
 
@@ -64,12 +64,13 @@ Each lab is **two weeks**. The schedule below assumes a 16-week semester with th
 Every lab file has the same shape, so you always know where you are:
 
 1. **This lab's feature** — what you'll master and why it matters beyond this project.
-2. **Theory** — a compact, self-contained explanation: the mental model, what's under the hood, the pitfalls, and a few *prove-it-to-yourself* experiments to run in the REPL. This is the reading; it replaces a lecture.
-3. **Project step** — what to add to `findex`, with milestones and a definition of done.
-4. **Deliverable checklist** — what "done" means for this lab.
-5. **Reflection** — "explain it at the whiteboard" questions. These *are* the interview questions.
-6. **Stretch** — one optional deeper cut for when you're ahead.
-7. **Resources** — hand-picked English talks, articles, and book chapters, each with one line on *why this one*.
+2. **Notes** — a short companion (`.notes.md` next to the lab): a bit of theory, paste-ready snippets, expected output, and the interview questions these experiments actually are. Use it in class or alone in the REPL; it does not replace the lab.
+3. **Theory** — a compact, self-contained explanation: the mental model, what's under the hood, the pitfalls, and a few *prove-it-to-yourself* experiments to run in the REPL. This is the reading; it replaces a lecture.
+4. **Project step** — what to add to `findex`, with milestones and a definition of done.
+5. **Deliverable checklist** — what "done" means for this lab.
+6. **Reflection** — "explain it at the whiteboard" questions. These *are* the interview questions.
+7. **Stretch** — one optional deeper cut for when you're ahead.
+8. **Resources** — hand-picked English talks, articles, and book chapters, each with one line on *why this one*.
 
 ---
 

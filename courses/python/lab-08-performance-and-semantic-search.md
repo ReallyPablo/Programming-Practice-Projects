@@ -2,7 +2,7 @@
 
 > "Premature optimization is the root of all evil. So is never measuring."
 
-**Weeks:** 15–16 · **Language focus:** profiling (`cProfile`, `py-spy`, Scalene), benchmarking methodology, why CPython is slow and NumPy is fast, vectorization and broadcasting, memory layout; embeddings and vector search · **Project step:** make the hot path measurably faster; optionally add hybrid keyword + semantic search; final polish and showcase · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 07](lab-07-fastapi-web-search.md)
+**Weeks:** 15–16 · **Language focus:** profiling (`cProfile`, `py-spy`, Scalene), benchmarking methodology, why CPython is slow and NumPy is fast, vectorization and broadcasting, memory layout; embeddings and vector search · **Project step:** make the hot path measurably faster; optionally add hybrid keyword + semantic search; final polish and showcase · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 07](lab-07-fastapi-web-search.md) · **Notes:** [theory + experiments](lab-08-performance-and-semantic-search.notes.md)
 
 ---
 

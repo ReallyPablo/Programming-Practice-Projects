@@ -2,7 +2,7 @@
 
 > "A search engine nobody can reach is a data structure."
 
-**Weeks:** 13–14 · **Language focus:** ASGI and the request lifecycle, FastAPI, Pydantic models and validation, dependency injection, app lifespan, sync vs async endpoints, settings from the environment, Docker, deployment · **Project step:** a search API and web UI, live at a public URL, load-tested · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 06](lab-06-asyncio-crawler.md)
+**Weeks:** 13–14 · **Language focus:** ASGI and the request lifecycle, FastAPI, Pydantic models and validation, dependency injection, app lifespan, sync vs async endpoints, settings from the environment, Docker, deployment · **Project step:** a search API and web UI, live at a public URL, load-tested · **Course:** [Python — Build a Search Engine](README.md) · **Previous:** [Lab 06](lab-06-asyncio-crawler.md) · **Notes:** [theory + experiments](lab-07-fastapi-web-search.notes.md)
 
 ---
 
