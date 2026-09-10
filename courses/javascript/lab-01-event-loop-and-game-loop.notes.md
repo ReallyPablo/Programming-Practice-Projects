@@ -27,6 +27,44 @@ JavaScript у вкладці — **один потік**. Поки функці�
 
 У грі це видно одразу: симуляція рахується ~60 разів на секунду, а картинка малюється стільки разів, скільки герців у монітора. Тому на екрані (у HUD) два різні лічильники, не один.
 
+Рушій не вміє «пізніше». Таймер, клік і rAF — це браузер. Він кладе колбек у чергу. Event loop забирає його, лише коли **стек порожній**.
+
+```mermaid
+flowchart LR
+  subgraph engine ["JS-рушій — один потік"]
+    Stack["Call stack<br/>зараз виконується"]
+  end
+  subgraph host ["Браузер, не мова"]
+    APIs["Web APIs<br/>setTimeout, DOM, fetch, rAF"]
+  end
+  subgraph queues ["Черги"]
+    Micro["Мікрозадачі<br/>Promise.then, queueMicrotask"]
+    Macro["Задачі<br/>таймер, клік, I/O"]
+  end
+  Stack -->|"setTimeout / fetch"| APIs
+  APIs -->|"час вийшов"| Macro
+  APIs -->|"Promise готовий"| Micro
+  Macro -->|"одна задача"| Stack
+  Micro -->|"усі підряд, до порожньої черги"| Stack
+```
+
+Один оберт циклу (спрощено, як у доповіді Jake Archibald):
+
+```mermaid
+flowchart TD
+  Run["Виконуй стек до кінця.<br/>Ніхто не перериває."]
+  Run --> Empty{"Стек порожній?"}
+  Empty -->|"ні"| Run
+  Empty -->|"так"| Drain["Спустоши ВСЮ мікрочергу"]
+  Drain --> Paint{"Браузер малює кадр?"}
+  Paint -->|"так"| RAF["rAF → style → layout → paint"]
+  Paint -->|"ні"| One
+  RAF --> One["Візьми ОДНУ задачу з черги задач"]
+  One --> Run
+```
+
+Ключ: мікрозадачі — **усі**, задача — **одна**. Тому ланцюжок `.then` може з’їсти кадр, а ланцюжок `setTimeout` — ні: між задачами браузер встигає намалювати.
+
 ---
 
 ## 1. Задача vs мікрозадача
@@ -43,6 +81,26 @@ console.log('4')
 ```
 
 **Очікуй:** `1`, `4`, `3`, `2`.
+
+Шлях того самого коду чергами. Синхронне — одразу. `then` чекає порожнього стека, але **перед** таймером.
+
+```mermaid
+sequenceDiagram
+  participant Stack as Стек
+  participant APIs as Web APIs
+  participant Micro as Мікрочерга
+  participant Macro as Черга задач
+
+  Stack->>Stack: log 1
+  Stack->>APIs: setTimeout 0
+  APIs-->>Macro: колбек log 2
+  Stack->>Micro: Promise.then log 3
+  Stack->>Stack: log 4
+  Note over Stack: стек порожній
+  Micro->>Stack: log 3
+  Note over Micro: мікрочерга порожня
+  Macro->>Stack: log 2
+```
 
 Ще раз, із прогнозом до запуску:
 
@@ -109,9 +167,17 @@ requestAnimationFrame(tick)
 
 Якщо рухати корабель на `velocity` **за кадр**, на 120 Hz він летить удвічі швидше. Якщо `velocity * dt` з реальним часом кадру — траєкторія залежить від fps (смерть для мультиплеєра в Lab 5).
 
-Правило: симуляція завжди `dt = 1/60`. Рендер малює «між» двома станами: `lerp(previous, current, alpha)`, де `alpha ∈ [0, 1)`.
+Правило: симуляція завжди крок `1/60` с. Рендер малює «між» двома станами: `lerp(previous, current, alpha)`, де `alpha` від 0 до 1.
 
-Кути: звичайний `lerp(359°, 1°)` дає 180° — ніс крутиться навпаки. Треба короткий шлях по колу (`lerpAngle` у лабі / у `render/draw.js`).
+```mermaid
+flowchart LR
+  Frame["Кадр монітора<br/>rAF"] --> Acc["accumulator += dt<br/>не більше 0.25 с"]
+  Acc --> Sim["поки вистачає на крок:<br/>simulate 1/60"]
+  Sim --> Draw["render alpha"]
+  Draw --> Hud["HUD: steps/s близько 60<br/>frames/s = герці"]
+```
+
+Кути: звичайний `lerp` між 359° і 1° дає 180° — ніс крутиться навпаки. Треба короткий шлях по колу (`lerpAngle` у лабі / у `render/draw.js`).
 
 ---
 
