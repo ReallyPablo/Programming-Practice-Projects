@@ -37,16 +37,16 @@ flowchart LR
 
 ## The eight labs
 
-| # | Lab | Language / runtime focus | What you add to the project |
-|---|---|---|---|
-| 1 | [The Event Loop Is the Game Loop](lab-01-event-loop-and-game-loop.md) | Call stack, task and microtask queues, `requestAnimationFrame`, ES modules, scope and closures, canvas | A ship you fly at 60 fps with a fixed-timestep simulation |
-| 2 | [Objects, Prototypes, and `this`](lab-02-objects-prototypes-classes.md) | Prototype chain, `class` sugar, `this` binding rules, composition, `Map`/`Set`, iterables and generators | Entities, bullets, obstacles, collisions, an entity manager |
-| 3 | [Asynchronous JavaScript](lab-03-async-javascript.md) | Promises, `async`/`await`, microtask ordering, `fetch`, `AbortController`, `EventTarget`, Web Audio | Asset pipeline with a loading screen, a lobby, sound |
-| 4 | [Node.js: The Other Runtime](lab-04-node-streams-websockets.md) | Node vs browser, CommonJS vs ESM, `EventEmitter`, streams and backpressure, `http`, npm, `ws` | A game server with rooms, WebSocket join/leave/chat, match logs streamed to disk |
-| 5 | [Real-Time Networking](lab-05-realtime-networking.md) | `ArrayBuffer`/`DataView`/typed arrays, shared modules via workspaces, timers in Node | Authoritative server, client-side prediction and reconciliation, interpolation, binary snapshots |
-| 6 | [TypeScript](lab-06-typescript.md) | Structural typing, discriminated unions, generics, `unknown`, strict mode, runtime validation at boundaries | Whole codebase typed; a shared typed protocol; optional UI framework |
-| 7 | [Engines, Memory, and Tests](lab-07-engine-performance-testing.md) | V8 internals (hidden classes, JIT, GC), DevTools profiling, object pooling, Web Workers, Vitest, fast-check, Playwright | Test suite, GC-hitch-free render loop, bots, a server load test |
-| 8 | [Ship It](lab-08-ship-it.md) | Production Node, Docker, CI/CD, WebSockets behind proxies, logging, metrics, abuse limits, PWA | Public URL, two strangers playing, dashboards, README, demo video |
+| # | Lab | Notes | Language / runtime focus | What you add to the project |
+|---|---|---|---|---|
+| 1 | [The Event Loop Is the Game Loop](lab-01-event-loop-and-game-loop.md) | [notes](lab-01-event-loop-and-game-loop.notes.md) | Call stack, task and microtask queues, `requestAnimationFrame`, ES modules, scope and closures, canvas | A ship you fly at 60 fps with a fixed-timestep simulation |
+| 2 | [Objects, Prototypes, and `this`](lab-02-objects-prototypes-classes.md) | [notes](lab-02-objects-prototypes-classes.notes.md) | Prototype chain, `class` sugar, `this` binding rules, composition, `Map`/`Set`, iterables and generators | Entities, bullets, obstacles, collisions, an entity manager |
+| 3 | [Asynchronous JavaScript](lab-03-async-javascript.md) | [notes](lab-03-async-javascript.notes.md) | Promises, `async`/`await`, microtask ordering, `fetch`, `AbortController`, `EventTarget`, Web Audio | Asset pipeline with a loading screen, a lobby, sound |
+| 4 | [Node.js: The Other Runtime](lab-04-node-streams-websockets.md) | [notes](lab-04-node-streams-websockets.notes.md) | Node vs browser, CommonJS vs ESM, `EventEmitter`, streams and backpressure, `http`, npm, `ws` | A game server with rooms, WebSocket join/leave/chat, match logs streamed to disk |
+| 5 | [Real-Time Networking](lab-05-realtime-networking.md) | [notes](lab-05-realtime-networking.notes.md) | `ArrayBuffer`/`DataView`/typed arrays, shared modules via workspaces, timers in Node | Authoritative server, client-side prediction and reconciliation, interpolation, binary snapshots |
+| 6 | [TypeScript](lab-06-typescript.md) | [notes](lab-06-typescript.notes.md) | Structural typing, discriminated unions, generics, `unknown`, strict mode, runtime validation at boundaries | Whole codebase typed; a shared typed protocol; optional UI framework |
+| 7 | [Engines, Memory, and Tests](lab-07-engine-performance-testing.md) | [notes](lab-07-engine-performance-testing.notes.md) | V8 internals (hidden classes, JIT, GC), DevTools profiling, object pooling, Web Workers, Vitest, fast-check, Playwright | Test suite, GC-hitch-free render loop, bots, a server load test |
+| 8 | [Ship It](lab-08-ship-it.md) | [notes](lab-08-ship-it.notes.md) | Production Node, Docker, CI/CD, WebSockets behind proxies, logging, metrics, abuse limits, PWA | Public URL, two strangers playing, dashboards, README, demo video |
 
 Each lab is **two weeks**. The schedule below assumes a 16-week semester with the final week doubling as the showcase.
 
@@ -64,12 +64,13 @@ Each lab is **two weeks**. The schedule below assumes a 16-week semester with th
 Every lab file has the same shape:
 
 1. **This lab's feature** — what you'll master and why it matters beyond this project.
-2. **Theory** — a compact, self-contained explanation: the mental model, what's under the hood, the pitfalls, and a few *prove-it-to-yourself* experiments to run in the browser console or Node REPL. This is the reading; it replaces a lecture.
-3. **Project step** — what to add to the game, with milestones and a definition of done.
-4. **Deliverable checklist** — what "done" means for this lab.
-5. **Reflection** — "explain it at the whiteboard" questions. These *are* the interview questions.
-6. **Stretch** — one optional deeper cut for when you're ahead.
-7. **Resources** — hand-picked English talks, articles, and book chapters, each with one line on *why this one*.
+2. **Notes** — a short companion (`.notes.md` next to the lab): a bit of theory, paste-ready snippets, expected output, and the interview questions these experiments actually are. Use it in class or alone in the console; it does not replace the lab.
+3. **Theory** — a compact, self-contained explanation: the mental model, what's under the hood, the pitfalls, and a few *prove-it-to-yourself* experiments to run in the browser console or Node REPL.
+4. **Project step** — what to add to the game, with milestones and a definition of done.
+5. **Deliverable checklist** — what "done" means for this lab.
+6. **Reflection** — "explain it at the whiteboard" questions. These *are* the interview questions.
+7. **Stretch** — one optional deeper cut for when you're ahead.
+8. **Resources** — hand-picked English talks, articles, and book chapters, each with one line on *why this one*.
 
 ---
 

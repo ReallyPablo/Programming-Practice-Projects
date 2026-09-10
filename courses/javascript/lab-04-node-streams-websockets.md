@@ -2,7 +2,7 @@
 
 > "Node.js is the same language, a different world: no DOM, no window, and *everything* is I/O."
 
-**Weeks:** 7–8 · **Language focus:** Node vs the browser, the Node event loop (libuv phases), CommonJS vs ESM, `EventEmitter`, streams and backpressure, `http`, `fs/promises`, `Buffer`, npm and `package.json`, environment config, the `ws` library · **Project step:** a game server with rooms, WebSocket join/leave/chat, and match logs streamed to disk · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 03](lab-03-async-javascript.md)
+**Weeks:** 7–8 · **Language focus:** Node vs the browser, the Node event loop (libuv phases), CommonJS vs ESM, `EventEmitter`, streams and backpressure, `http`, `fs/promises`, `Buffer`, npm and `package.json`, environment config, the `ws` library · **Project step:** a game server with rooms, WebSocket join/leave/chat, and match logs streamed to disk · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 03](lab-03-async-javascript.md) · **Notes:** [theory + experiments](lab-04-node-streams-websockets.notes.md)
 
 ---
 

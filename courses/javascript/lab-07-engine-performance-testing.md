@@ -3,7 +3,7 @@
 > "Make it work, make it right, make it fast — in that order, and never skip the middle one."
 > — Kent Beck, paraphrased
 
-**Weeks:** 13–14 · **Language / runtime focus:** how V8 executes JavaScript — parsing, bytecode, JIT tiers, hidden classes and inline caches, deoptimization; garbage collection and why it hitches frames; allocation pressure and object pooling; typed arrays for hot data; Chrome DevTools Performance and Memory panels; Web Workers; testing with Vitest, fast-check, and Playwright; ESLint/Prettier or Biome; CI · **Project step:** a real test suite, a GC-hitch-free render loop, bots, and a server load test · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 06](lab-06-typescript.md)
+**Weeks:** 13–14 · **Language / runtime focus:** how V8 executes JavaScript — parsing, bytecode, JIT tiers, hidden classes and inline caches, deoptimization; garbage collection and why it hitches frames; allocation pressure and object pooling; typed arrays for hot data; Chrome DevTools Performance and Memory panels; Web Workers; testing with Vitest, fast-check, and Playwright; ESLint/Prettier or Biome; CI · **Project step:** a real test suite, a GC-hitch-free render loop, bots, and a server load test · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 06](lab-06-typescript.md) · **Notes:** [theory + experiments](lab-07-engine-performance-testing.notes.md)
 
 ---
 

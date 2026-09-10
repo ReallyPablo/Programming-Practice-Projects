@@ -3,7 +3,7 @@
 > "The client is in the hands of the enemy."
 > — every multiplayer programmer, eventually
 
-**Weeks:** 9–10 · **Language focus:** `ArrayBuffer`, `DataView`, typed arrays, endianness, `TextEncoder`; sharing simulation code between client and server via workspaces; precise timers in Node; `structuredClone` · **Networking:** the authoritative server model, tick rates, snapshots, client-side prediction and server reconciliation, entity interpolation, latency simulation · **Project step:** two players dogfighting across the internet, smoothly, at 30 Hz, with a binary protocol · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 04](lab-04-node-streams-websockets.md)
+**Weeks:** 9–10 · **Language focus:** `ArrayBuffer`, `DataView`, typed arrays, endianness, `TextEncoder`; sharing simulation code between client and server via workspaces; precise timers in Node; `structuredClone` · **Networking:** the authoritative server model, tick rates, snapshots, client-side prediction and server reconciliation, entity interpolation, latency simulation · **Project step:** two players dogfighting across the internet, smoothly, at 30 Hz, with a binary protocol · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 04](lab-04-node-streams-websockets.md) · **Notes:** [theory + experiments](lab-05-realtime-networking.notes.md)
 
 ---
 

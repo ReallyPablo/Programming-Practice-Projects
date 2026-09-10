@@ -2,7 +2,7 @@
 
 > "A promise is a placeholder for a value you don't have yet, plus a contract about how you'll be told."
 
-**Weeks:** 5–6 · **Language focus:** callbacks → Promises → `async`/`await`; the three promise states; chaining and error propagation; microtask ordering; `Promise.all`/`allSettled`/`race`/`any`; `fetch` and `AbortController`; `EventTarget`; async iteration; Web Audio · **Project step:** an asset pipeline with a loading screen, a lobby over HTTP, sound effects · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 02](lab-02-objects-prototypes-classes.md)
+**Weeks:** 5–6 · **Language focus:** callbacks → Promises → `async`/`await`; the three promise states; chaining and error propagation; microtask ordering; `Promise.all`/`allSettled`/`race`/`any`; `fetch` and `AbortController`; `EventTarget`; async iteration; Web Audio · **Project step:** an asset pipeline with a loading screen, a lobby over HTTP, sound effects · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 02](lab-02-objects-prototypes-classes.md) · **Notes:** [theory + experiments](lab-03-async-javascript.notes.md)
 
 ---
 

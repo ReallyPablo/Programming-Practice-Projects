@@ -2,7 +2,7 @@
 
 > "It's not done until strangers are using it."
 
-**Weeks:** 15–16 · **Runtime / operations focus:** production Node (`NODE_ENV`, signals, health checks, keep-alive); WebSockets behind reverse proxies; Docker multi-stage builds for a monorepo; environment and secrets; TLS/WSS; origin checks, rate limits, and abuse handling; structured logging; metrics; error tracking; PWA install; deployment pipelines · **Project step:** a public URL where two strangers can play; dashboards; a finished README, GIF, and demo video; `v1.0.0` · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 07](lab-07-engine-performance-testing.md)
+**Weeks:** 15–16 · **Runtime / operations focus:** production Node (`NODE_ENV`, signals, health checks, keep-alive); WebSockets behind reverse proxies; Docker multi-stage builds for a monorepo; environment and secrets; TLS/WSS; origin checks, rate limits, and abuse handling; structured logging; metrics; error tracking; PWA install; deployment pipelines · **Project step:** a public URL where two strangers can play; dashboards; a finished README, GIF, and demo video; `v1.0.0` · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 07](lab-07-engine-performance-testing.md) · **Notes:** [theory + experiments](lab-08-ship-it.notes.md)
 
 ---
 

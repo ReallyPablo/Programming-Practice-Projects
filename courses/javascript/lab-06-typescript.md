@@ -2,7 +2,7 @@
 
 > "TypeScript is JavaScript with a linter so good it needed its own compiler."
 
-**Weeks:** 11–12 · **Language focus:** structural typing and inference; `unknown` vs `any`; union types and discriminated unions with exhaustive `switch`; generics; utility and mapped types; `readonly`; branded types; type guards, narrowing, and `satisfies`; `strict` `tsconfig`; running TS on Node and Vite; runtime validation at boundaries · **Project step:** the whole codebase typed under `strict`; one shared, typed protocol; validation of every incoming message; optional UI framework for lobby/HUD · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 05](lab-05-realtime-networking.md)
+**Weeks:** 11–12 · **Language focus:** structural typing and inference; `unknown` vs `any`; union types and discriminated unions with exhaustive `switch`; generics; utility and mapped types; `readonly`; branded types; type guards, narrowing, and `satisfies`; `strict` `tsconfig`; running TS on Node and Vite; runtime validation at boundaries · **Project step:** the whole codebase typed under `strict`; one shared, typed protocol; validation of every incoming message; optional UI framework for lobby/HUD · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Previous:** [Lab 05](lab-05-realtime-networking.md) · **Notes:** [theory + experiments](lab-06-typescript.notes.md)
 
 ---
 

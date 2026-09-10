@@ -3,7 +3,7 @@
 > "JavaScript is single-threaded, non-blocking, asynchronous, concurrent. Which is a lot of words that sound contradictory until you see the loop."
 > — Philip Roberts, paraphrased
 
-**Weeks:** 1–2 · **Language focus:** how JavaScript runs — call stack, heap, task queue, microtask queue, `requestAnimationFrame`; ES modules; `let`/`const`, block scope, and closures; the Canvas 2D API · **Project step:** a ship you fly on a canvas at 60 fps, driven by a fixed-timestep simulation · **Course:** [JavaScript — Build a Multiplayer Game](README.md)
+**Weeks:** 1–2 · **Language focus:** how JavaScript runs — call stack, heap, task queue, microtask queue, `requestAnimationFrame`; ES modules; `let`/`const`, block scope, and closures; the Canvas 2D API · **Project step:** a ship you fly on a canvas at 60 fps, driven by a fixed-timestep simulation · **Course:** [JavaScript — Build a Multiplayer Game](README.md) · **Notes:** [theory + experiments](lab-01-event-loop-and-game-loop.notes.md)
 
 ---
 
