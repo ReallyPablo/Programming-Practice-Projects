@@ -40,6 +40,17 @@ Two distinct roles:
 
 This is why a list can be looped over twice but an iterator can't: the list hands out a *fresh* iterator each time; the iterator *is* the position. And it's why `len()` doesn't work on an iterator — it doesn't know how many items remain until it produces them.
 
+The list itself does not shrink. `iter(xs)` is a second object — a finger, not the box:
+
+```python
+xs = [1, 2, 3]
+it = iter(xs)
+print(next(it), xs)   # 1 [1, 2, 3]  — xs is intact
+print(next(it), xs)   # 2 [1, 2, 3]
+```
+
+`list(xs)` twice works because each call asks the list for a *new* finger starting at 0. `list(it)` twice doesn't: the second call starts from the end of the *same* finger. Elements didn't vanish from the list; the finger ran off the end.
+
 Write an iterator by hand once in your life, so you never forget it:
 
 ```python
@@ -60,31 +71,39 @@ for i in Countdown(3):
 
 ### 2. Generators: iterators without the boilerplate
 
-Any function containing `yield` becomes a **generator function**. Calling it runs *nothing* — it returns a generator object, which is an iterator. Each `next()` runs the body until the next `yield`, hands out that value, and **freezes the function's entire state** (locals, position) until the next `next()`.
+Any function containing `yield` becomes a **generator function**. The `()` are still a call — but `yield` changes *what the call means*. It does not enter the body. It returns a **generator object** (an iterator). The body starts on the first `next()`. Each `next()` runs until the next `yield`, hands out that value, and **freezes the function's entire state** (locals, position) until the next `next()`.
 
 ```python
+def ordinary(n):
+    print("start", n)
+    return n
+
+ordinary(3)               # prints "start 3" immediately; returns 3
+
 def countdown(n):
+    print("start", n)
     while n > 0:
         yield n
         n -= 1
 
-g = countdown(3)      # nothing has run yet
-next(g)               # 3  -- runs to the first yield, pauses
-next(g)               # 2
-next(g)               # 1
-next(g)               # StopIteration
+g = countdown(3)          # generator object — body has not run
+print(type(g))            # <class 'generator'>
+next(g)                   # now prints "start 3", then yields 3 and pauses
+next(g)                   # 2
+next(g)                   # 1
+next(g)                   # StopIteration
 ```
 
-That 4-line function is the `Countdown` class above, minus the class. A generator is a *resumable function*. The key consequences:
+That `countdown` is the `Countdown` class above, minus the class. A generator is a *resumable function*. The key consequences:
 
 - **Lazy.** Work happens only when someone asks for the next value. `countdown(10**12)` returns instantly.
 - **Constant memory.** Only the current value exists. There is no list.
 - **Single-pass.** Once exhausted, it's done. To iterate again, call the function again.
 - **Composable.** A generator can consume another generator. That's a pipeline.
 
-A **generator expression** is the inline form: `(x * x for x in range(10))`. Same laziness, no function needed. Compare to the list comprehension `[x * x for x in range(10)]`, which builds the whole list immediately. Rule of thumb: **square brackets when you need the list; parentheses when you just need to loop over it once.**
+A **generator expression** is the inline form: `(x * x for x in range(10))`. Same laziness, no function needed. Compare to the list comprehension `[x * x for x in range(10)]`, which builds the whole list immediately. `range(n)` is lazy too — it stores start/stop/step, not `n` integers. Rule of thumb: **square brackets when you need the list; parentheses when you just need to loop over it once.**
 
-`yield from other_iterable` delegates to another iterable — it's how you flatten one generator into another cleanly:
+You'll need `yield from` in M1 when one generator should flatten another (each file's lines into one stream of documents):
 
 ```python
 def all_lines(paths):
@@ -110,7 +129,7 @@ counts = Counter(tokens)        # the only thing that grows: the term table
 
 A 10 GB corpus flows through this with memory usage equal to *one document plus the counter*. The `Counter` is the sink — the one data structure that legitimately grows, because it holds the *answer*. Everything upstream is a stream.
 
-The standard library ships a toolbox for this in [`itertools`](https://docs.python.org/3/library/itertools.html) — learn these five: `islice` (take the first N of a stream — indispensable for testing on a slice of the corpus), `chain` (concatenate streams), `groupby` (group *consecutive* equal items), `takewhile` / `dropwhile`, and `batched` (3.12+, chunk a stream into tuples of N). Also `map` and `filter` are lazy in Python 3, and `enumerate` and `zip` are too.
+For M3 you'll want [`itertools`](https://docs.python.org/3/library/itertools.html) — especially `islice` (take the first N of a stream, for `--limit`). Also useful later: `chain`, `groupby` (consecutive equals only), `takewhile` / `dropwhile`, and `batched` (3.12+, chunk a stream into tuples of N). `map` and `filter` are lazy in Python 3, and `enumerate` and `zip` are too. Don't memorize the rest until the pipeline exists.
 
 ### 4. Files are iterators (and how to read text correctly)
 
@@ -127,7 +146,7 @@ A **token** is the unit your index will store — usually a word. Turning text i
 - **Use `re.finditer`, not `re.findall`.** `findall` builds a list of every match; `finditer` yields match objects lazily. Same regex, streaming result.
 - **`\w` is Unicode-aware in Python 3.** `r"\w+"` matches Cyrillic, accented Latin, CJK — not just ASCII. Good: your Ukrainian notes tokenize correctly. Watch for apostrophes in words (`don't`, `п'ять`) — decide a policy.
 - **Case: use `str.casefold()`, not `lower()`.** `casefold` is the aggressive, locale-independent normalization designed for caseless matching (`"ß".casefold() == "ss"`, `"Straße"` matches `"STRASSE"`). `lower()` misses these.
-- **Normalize Unicode with `unicodedata.normalize("NFC", text)`.** The same visible character can be encoded as one code point or as a base + combining mark (`é` as `U+00E9` or as `e` + `U+0301`). If you don't normalize, `"café"` and `"café"` become different tokens and half your results vanish. NFC is the standard choice for text you'll compare.
+- **Normalize Unicode with `unicodedata.normalize("NFC", text)`.** The same visible character can be encoded as one code point or as a base + combining mark (`é` as `U+00E9` or as `e` + `U+0301`). If you don't normalize, `"café"` and `"cafe\u0301"` become different tokens and half your results vanish — they look identical on screen. NFC is the standard choice for text you'll compare.
 - Store the **document offsets** of tokens if you want phrase search later (Lab 3). `match.start()` gives you that for free.
 
 Read [the Unicode HOWTO](https://docs.python.org/3/howto/unicode.html) once; it's the fastest way to stop being scared of `UnicodeDecodeError`.
@@ -149,12 +168,14 @@ You will produce a table this lab: eager vs. lazy, peak memory and elapsed time,
 - **Accidental materialization.** `sorted(gen)`, `list(gen)`, `", ".join(gen)`, `set(gen)` all pull the whole stream into memory. Sometimes you want that; know when you're doing it.
 - **Holding a reference kills the benefit.** `lines = list(f)` then `for line in lines` — you built the list; laziness is gone. Pass generators along, don't store them.
 
-### Prove it to yourself (REPL, 10 minutes)
+### Prove it to yourself (REPL)
 
-1. `it = iter([1, 2, 3])`; call `next(it)` four times. Then `for x in it: print(x)` — why does nothing print?
-2. Compare peak memory: `sum([x * x for x in range(10**7)])` vs `sum(x * x for x in range(10**7))` under `tracemalloc`. Explain the ratio.
-3. `g = (print(i) or i for i in range(3))` — nothing prints. `next(g)` — now something prints. What does this tell you about when generator bodies run?
-4. `"café" == unicodedata.normalize("NFC", "cafe\u0301")` — evaluate both sides with and without normalization.
+Do these **in order**. Stop after each one and say the output out loud before you run it. Paste-ready snippets with expected output are in the [notes](lab-01-iterators-and-the-corpus.notes.md). The project (`uv init`, M1–M4) comes *after* these five — not instead of them.
+
+1. `xs = [1, 2, 3]`; `it = iter(xs)`; print `next(it)` *and* `xs`. Then `list(it)` twice. Why is the list intact and the second `list(it)` empty?
+2. Compare peak memory: `sum([x * x for x in range(10**7)])` vs `sum(x * x for x in range(10**7))` under `tracemalloc`. What is still in RAM in the lazy version? (`range` is not a list.)
+3. Contrast `def ordinary(n): print("start", n); return n` with the same function using `yield`. Why does `ordinary(3)` print `start` and `countdown(3)` doesn't, even though both are calls?
+4. `"café" == "cafe\u0301"` with and without `unicodedata.normalize("NFC", …)`. They look the same; are they?
 5. `open` a file, iterate it once with `for`, then try again. What happens, and how does this relate to Pitfall 1?
 
 ---
