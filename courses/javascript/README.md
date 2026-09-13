@@ -8,7 +8,7 @@ This is a 16-week, 8-lab course for 3rd–4th-year students who **already progra
 Every lab has two halves that reinforce each other:
 
 1. **One language feature, explored properly.** Not "here's the syntax" — the mental model, what the engine actually does, the classic pitfalls, and the interview questions it generates.
-2. **One increment of the project** that *needs* that feature. You meet the event loop when a blocking call freezes your frame. You meet prototypes when entities need shared behavior. You meet promises when assets must load. You meet Node streams when match logs must hit disk without eating memory. You meet TypeScript when your message protocol has forty shapes and one typo.
+2. **One increment of the project** that *needs* that feature. You meet the event loop when a blocking call freezes your frame. You meet `this` and composition when entities share behavior (`class` is the tool; the prototype chain is one experiment, not a gate). You meet promises when assets must load. You meet Node streams when match logs must hit disk without eating memory. You meet TypeScript when your message protocol has forty shapes and one typo.
 
 A game is the ideal vehicle for JavaScript because it exercises **both runtimes** the language lives in — the browser (DOM, canvas, `requestAnimationFrame`, WebSocket client) and Node (streams, `EventEmitter`, WebSocket server) — and because the event loop, garbage collection, and network latency are not abstractions in a game: you *see* them as dropped frames and rubber-banding players.
 
@@ -24,7 +24,7 @@ The reference project in these labs is **`dogfight`**: a top-down 2D arena where
 
 ```mermaid
 flowchart LR
-    L1[Lab 1<br/>Event loop & modules<br/><i>game loop, a ship you fly</i>] --> L2[Lab 2<br/>Objects, prototypes, classes<br/><i>entities, bullets, collisions</i>]
+    L1[Lab 1<br/>Event loop & modules<br/><i>game loop, a ship you fly</i>] --> L2[Lab 2<br/>Objects, class, this<br/><i>entities, bullets, collisions</i>]
     L2 --> L3[Lab 3<br/>Promises & async<br/><i>asset loading, lobby, audio</i>]
     L3 --> L4[Lab 4<br/>Node: streams & EventEmitter<br/><i>server, rooms, WebSockets</i>]
     L4 --> L5[Lab 5<br/>Binary data & networking<br/><i>authoritative server, prediction</i>]
@@ -40,7 +40,7 @@ flowchart LR
 | # | Lab | Notes | Language / runtime focus | What you add to the project |
 |---|---|---|---|---|
 | 1 | [The Event Loop Is the Game Loop](lab-01-event-loop-and-game-loop.md) | [notes](lab-01-event-loop-and-game-loop.notes.md) | Call stack, task and microtask queues, `requestAnimationFrame`, ES modules, scope and closures, canvas | A ship you fly at 60 fps with a fixed-timestep simulation |
-| 2 | [Objects, Prototypes, and `this`](lab-02-objects-prototypes-classes.md) | [notes](lab-02-objects-prototypes-classes.notes.md) | Prototype chain, `class` sugar, `this` binding rules, composition, `Map`/`Set`, iterables and generators | Entities, bullets, obstacles, collisions, an entity manager |
+| 2 | [Objects, Prototypes, and `this`](lab-02-objects-prototypes-classes.md) | [notes](lab-02-objects-prototypes-classes.notes.md) | `class` and one-level `extends`, `this` binding rules, composition, `Map`/`Set` (prototype chain: one experiment, not a gate) | Entities, bullets, obstacles, collisions, an entity manager |
 | 3 | [Asynchronous JavaScript](lab-03-async-javascript.md) | [notes](lab-03-async-javascript.notes.md) | Promises, `async`/`await`, microtask ordering, `fetch`, `AbortController`, `EventTarget`, Web Audio | Asset pipeline with a loading screen, a lobby, sound |
 | 4 | [Node.js: The Other Runtime](lab-04-node-streams-websockets.md) | [notes](lab-04-node-streams-websockets.notes.md) | Node vs browser, CommonJS vs ESM, `EventEmitter`, streams and backpressure, `http`, npm, `ws` | A game server with rooms, WebSocket join/leave/chat, match logs streamed to disk |
 | 5 | [Real-Time Networking](lab-05-realtime-networking.md) | [notes](lab-05-realtime-networking.notes.md) | `ArrayBuffer`/`DataView`/typed arrays, shared modules via workspaces, timers in Node | Authoritative server, client-side prediction and reconciliation, interpolation, binary snapshots |
@@ -81,7 +81,7 @@ Every lab file has the same shape:
 - **README is part of every deliverable.** Each lab adds a section: what you built, the measurement or evidence the lab asked for, what you learned. By Lab 8 that README is your portfolio write-up.
 - **Every lab ends in a 5-minute defense.** You demo the increment and answer 2–3 Reflection questions. You should be able to explain every line you committed.
 - **AI assistants** — follow the [program-wide policy](../../README.md). Use them to learn faster, not to skip understanding. If you can't explain it at the defense, it doesn't count.
-- **Vanilla first, frameworks later — and optional.** Labs 1–5 are framework-free on purpose: the event loop, prototypes, promises, streams, and WebSockets *are* the curriculum, and frameworks exist to hide them. From Lab 6 you *may* introduce a framework where it earns its place — Svelte, Vue, or React for the lobby/HUD; Fastify or NestJS on the server — if you can articulate what it buys you. The game loop and canvas stay vanilla throughout.
+- **Vanilla first, frameworks later — and optional.** Labs 1–5 are framework-free on purpose: the event loop, `this` and objects, promises, streams, and WebSockets *are* the curriculum, and frameworks exist to hide them. From Lab 6 you *may* introduce a framework where it earns its place — Svelte, Vue, or React for the lobby/HUD; Fastify or NestJS on the server — if you can articulate what it buys you. The game loop and canvas stay vanilla throughout.
 
 ---
 

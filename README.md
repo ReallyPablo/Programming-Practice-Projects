@@ -105,7 +105,7 @@ Two 16-week courses for 3rd–4th-year students who already program, built on th
 | Course | Project | Labs |
 |---|---|---|
 | [**Python**](./courses/python/README.md) | A full-text search engine over a corpus you choose — iterators → inverted index → BM25 ranking → typed/tested/packaged CLI → parallel indexing (the GIL) → async crawler → FastAPI service → NumPy + embeddings. Counts as [Lab 15](./labs/lab-15-mini-search-engine.md). | [8 labs](./courses/python/README.md#the-eight-labs) |
-| [**JavaScript**](./courses/javascript/README.md) | A real-time multiplayer browser game with an authoritative Node server — the event loop → prototypes and `this` → promises and async → Node streams and WebSockets → prediction, reconciliation, and a binary protocol → TypeScript → V8 internals, profiling, and tests → Docker, CI/CD, and a public URL. Counts as [Lab 27](./labs/lab-27-multiplayer-browser-game.md). | [8 labs](./courses/javascript/README.md#the-eight-labs) |
+| [**JavaScript**](./courses/javascript/README.md) | A real-time multiplayer browser game with an authoritative Node server — the event loop → objects, `class`, and `this` → promises and async → Node streams and WebSockets → prediction, reconciliation, and a binary protocol → TypeScript → V8 internals, profiling, and tests → Docker, CI/CD, and a public URL. Counts as [Lab 27](./labs/lab-27-multiplayer-browser-game.md). | [8 labs](./courses/javascript/README.md#the-eight-labs) |
 
 ---
 
