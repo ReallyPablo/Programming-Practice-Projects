@@ -2,7 +2,7 @@
 
 > "A scanner is a program that looks at a string and says what it is — or that it isn't anything."
 
-**Weeks:** 15–16 · **Language focus:** tokens, scanning, linked lists, ADTs, syntax errors, the path from text to bytes · **Project step:** a lexer + assembler; `hello`, `search`, `fib`, `bounce` as `.asm` · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 07](lab-07-call-and-return.md) · **Notes:** [theory + experiments](lab-08-give-it-a-language.notes.md)
+**Weeks:** 15–16 · **Language focus:** tokens, scanning, linked lists, ADTs, syntax errors, the path from text to bytes · **Project step:** a lexer + assembler; `hello`, `search`, `fib` as `.asm` · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 07](lab-07-call-and-return.md) · **Notes:** [theory + experiments](lab-08-give-it-a-language.notes.md)
 
 This lab's skill: recognize strings of a language, or report an error — with a line number. The language is the assembler you write for `ember`.
 
@@ -22,6 +22,8 @@ HALT
 A **lexer** (scanner) walks characters and emits **tokens**: `Ident(LOADI)`, `Ident(A)`, `Comma`, `Number(65)`, `Newline`, `Ident(OUT)`, … Illegal characters, a number like `0xGG`, a string that never ends — **errors**, with a line number. That is L(V) in the only sense that matters: a grammar you can point at, and a program that accepts or rejects.
 
 An **assembler** turns tokens into the bytes `step` already understands, resolving labels (`loop:` → address). A **linked list** of tokens (or of labels) is the data structure: you do not know the length up front; you grow node by node. The list is an ADT (`push_back`, `walk`, `destroy`). Trees are the Stretch (an expression AST); you do not need a full compiler.
+
+And then you cash it in. [Lab 7](lab-07-call-and-return.md) gave you `CALL`, `RET` and a stack, and stopped at factorial because hand-assembling recursive Fibonacci means computing forty jump targets in hexadecimal — work that teaches arithmetic, not recursion. With an assembler, `fib` is twenty readable lines and the labels resolve themselves. **That is the argument for this whole lab**, and you should be able to make it at the defense: a language is not decoration, it is what makes the next program affordable.
 
 By the showcase, `ember programs/fib.asm` loads, assembles, runs, and prints `8`. A stranger can read the `.asm`. That is a computer with a language.
 
@@ -65,12 +67,21 @@ Draw a tiny state machine for `0x` hex if you like; do not deliver a flowchart i
 program      := { line }
 line         := [ ident ':' ] [ instruction ] [ comment ] newline
 instruction  := mnemonic { operand }
-operand      := register | number | ident
-register     := 'A' | 'B'  (and SP/PC if you have them)
-mnemonic     := LOADI | LOAD | STORE | ADD | ... | CALL | RET | HALT | ...
+operand      := register | number | ident | '[' (number | 'H') ']'
+register     := 'A' | 'B' | 'H'
+mnemonic     := any mnemonic in ISA.md
 ```
 
-Assembler pass 1: lex, then walk tokens, record labels → addresses (instruction sizes you already know from `step`). Pass 2: emit bytes, filling in label operands. Unknown mnemonic, missing comma, `JMP` without a target — errors. Do not recover brilliantly; **fail clearly**.
+The mnemonics and their operand shapes are not yours to invent: they are the
+table in [ISA.md §5](ISA.md#5-the-instruction-set). Read the instruction sizes
+from the same table your `step()` reads them from — a literal shared constant if
+you can manage it, because the day they drift apart is the day your assembler
+emits a program that runs and quietly does something else.
+
+Assembler pass 1: lex, then walk tokens, record labels → addresses, adding each
+instruction's size as you go. Pass 2: emit bytes, filling in label operands.
+Unknown mnemonic, missing comma, `JMP` without a target — errors. Do not recover
+brilliantly; **fail clearly**.
 
 ### 3. Linked lists: when length is discovered, not declared
 
@@ -121,8 +132,8 @@ src/asm/
 programs/
   hello.asm      # OUT a character or OUTS a string
   search.asm     # linear search (Lab 4) as readable source
-  fib.asm        # recursive fib (Lab 7)
-  bounce.asm     # PLOT a moving pixel (Lab 5–6)
+  fib.asm        # recursive fib -- the payoff for Lab 7's CALL/RET
+  bounce.asm     # PLOT a moving pixel (Advanced)
 ```
 
 ### Milestones
@@ -131,29 +142,69 @@ programs/
 Feed a string, get a list of tokens. Reject illegal characters and bad numbers with `line`. Command `lex programs/hello.asm` prints tokens one per line. Paste that output.
 
 **M2 — Assembler.**
-Labels, mnemonics from your opcode table, numbers in dec/hex/bin. `asm programs/hello.asm` dumps the bytes (or loads them at `0x0000`). Round-trip: assembled `HALT` is `0x00` (or whatever you chose).
+Labels, the mnemonics from [ISA.md](ISA.md), numbers in dec/hex/bin. `asm programs/hello.asm` dumps the bytes, or loads them at `0x000`. Round-trip check: assembled `HALT` is the byte `0x00`, and `JMP 0x0123` is `30 23 01` — opcode, then the address little-endian.
 
-**M3 — Four programs.**
-All four `.asm` files run. `fib` prints the right number. `bounce` shows at least a few frames (`show` in a host loop, or `PLOT` then `show` once — document). `search` finds a poked/included byte.
+**M3 — Three programs, then a fourth if you have time.**
+
+- `hello.asm` — `OUTS` a string you assembled into the data region.
+- `search.asm` — Lab 4's linear search, but now *readable*: `loop:`, `found:`, real names. Put it next to the hand-poked hex from Lab 4 in the README. That diff is the lab's whole argument.
+- `fib.asm` — **recursive** Fibonacci, using the `CALL`/`RET` and the calling convention from [Lab 7](lab-07-call-and-return.md) and [ISA.md §6](ISA.md#calling-convention). `fib(6)` prints `8`; check a couple more against a calculator (`fib(10)` is `55`).
+- `bounce.asm` — a pixel that moves across the display over several frames. This one is **Advanced**, not required: take it if `fib` came out clean and you have a week left.
+
+If `fib` misbehaves, it is almost always the convention: something clobbered `B` or `H` across a `CALL`. Add a `stack` command to the REPL and step it.
 
 **M4 — README as the product.**
-Architecture diagram (source → tokens → bytes → CPU). Opcode table. Calling convention. How to build and run in three commands. Paste `./build/ember programs/fib.asm` output and a few frames of `show` from `bounce` (a GIF of the terminal is fine, not required). Known limits (no macros, no expressions, one instruction per line). Tag `v1.0.0` as well as `lab-08`.
+This is the file a stranger opens. It should stand alone:
+
+- An architecture diagram: source → tokens → bytes → CPU → screen.
+- The [memory map](ISA.md#2-memory-map) and the instructions you implemented, including your own extensions in the same format.
+- The calling convention.
+- Build and run in three commands.
+- Pasted output: `./build/ember programs/fib.asm`, a `dump`, and a frame of `show`. (A GIF of the terminal is nice, not required.)
+- Known limits, stated plainly: no macros, no expressions in operands, one instruction per line.
+- One honest paragraph: what surprised you across the eight labs.
+
+Tag `v1.0.0` as well as `lab-08`.
 
 ### Definition of done
 
 - Lexer emits tokens or a line-numbered error; linked list freed.
-- Assembler supports labels and your full opcode set used by the four programs.
-- `hello`, `search`, `fib`, `bounce` in `programs/`.
-- `./ember path.asm` assemble-and-run.
+- Assembler supports labels, and every mnemonic the programs use, with sizes from [ISA.md](ISA.md).
+- `hello.asm`, `search.asm`, `fib.asm` in `programs/`; `fib(6)` prints `8`.
+- `./ember path.asm` assemble-and-run; the Lab 1 REPL still there for debugging bytes.
 - README a stranger can follow; tags `lab-08` and `v1.0.0`.
+
+---
+
+## Levels
+
+### Basic — "it reads text" (~11–13 hours)
+- A lexer: characters in, tokens out, comments and whitespace skipped.
+- Illegal characters and malformed numbers are rejected **with a line number**, not silently taken as 0.
+- `lex programs/hello.asm` prints one token per line; that output is pasted in the README.
+- `hello.asm` assembles and runs: `./ember programs/hello.asm` prints something you can read.
+- Repo tagged `lab-08`.
+
+### Standard — target (~17–19 hours)
+- Everything in **Definition of done** above.
+- Two-pass assembler with labels; every mnemonic in [ISA.md](ISA.md) that your programs use, with instruction sizes taken from that same table.
+- `hello.asm`, `search.asm` and `fib.asm` all run. `fib.asm` is the **recursive** Fibonacci from Lab 7's convention, and `fib(6)` prints `8`.
+- Token list nodes are freed; the happy path is sanitizer-clean.
+- README a stranger can follow: diagram (source → tokens → bytes → CPU), the opcode table, build in three commands, pasted output.
+- Tags `lab-08` and `v1.0.0`.
+
+### Advanced — distinction (~23–25 hours)
+- Everything above, plus `bounce.asm`: a pixel that moves across the display over several frames.
+- A disassembler: bytes back to a readable listing, checked against a program you assembled.
+- An expression parser (`ADD A, 2+3`) with a binary-tree AST, or `.define` macros.
 
 ---
 
 ## Deliverable checklist
 
 - [ ] `lexer` + token list ADT; errors have line numbers.
-- [ ] Two-pass assembler; labels work.
-- [ ] Four `.asm` demos; `ember file.asm` runs.
+- [ ] Two-pass assembler; labels work; sizes come from [ISA.md](ISA.md).
+- [ ] `hello`, `search`, `fib` as `.asm`; `ember file.asm` runs; `fib(6)` is `8`.
 - [ ] List nodes `delete`d; ASan/LSan clean on the happy path.
 - [ ] README: diagram, opcodes, build, pasted terminal output.
 - [ ] Git tags `lab-08` and `v1.0.0`.
@@ -168,12 +219,18 @@ Architecture diagram (source → tokens → bytes → CPU). Opcode table. Callin
 4. Why a linked list (or why a capped array) for tokens? What is the ADT's interface?
 5. Why two passes? What breaks with one pass and a `JMP` forward?
 6. Why does the CPU not read `.asm` characters directly? What does the lexer add?
+7. Show `search.asm` next to the hex you poked in Lab 4. What did the assembler buy you, in one sentence?
+8. What would break first if your assembler's size table and `step()`'s disagreed by one byte?
 
 ---
 
 ## Stretch
 
-Expression parser (`ADD A, 2+3`) with a **binary tree** AST. A `queue` of pending operands. Macro `.define`. A disassembler (`bytes → guess at asm`) for the dump. Read Crafting Interpreters, chapter *Scanning*, and list three things you skipped.
+`bounce.asm`, if you left it out of M3.
+
+A **disassembler**: bytes back to a readable listing. Run it on a program you just assembled and diff the result against the source — a round trip that finds size bugs nothing else will.
+
+An expression parser (`ADD A, 2+3`) with a **binary tree** AST. A `queue` of pending operands. Macro `.define`. Read Crafting Interpreters, chapter *Scanning*, and list three things you skipped.
 
 ---
 

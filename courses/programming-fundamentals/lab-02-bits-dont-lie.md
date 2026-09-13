@@ -72,23 +72,26 @@ That triple is the whole of "bit flags." Status registers in real CPUs are exact
 
 ### 5. An opcode is a byte with a meaning
 
-Pick a tiny encoding and write it in the README. One workable scheme (you may change it if you document it):
+From this week on, `ember` has a written-down instruction set: **[ISA.md](ISA.md)**.
+Open it now and keep it open. It lists, for every instruction, the opcode byte,
+the **size in bytes**, which flags it touches, and what it does.
 
-```txt
-0x00 HALT
-0x01 NOP
-0x10 ADD   A, B     ; A = A + B, set Z/N/C
-0x11 SUB   A, B
-0x12 AND   A, B
-0x13 OR    A, B
-0x14 XOR   A, B
-0x15 NOT   A
-0x16 SHL   A
-0x17 SHR   A
-0x20 LOADI A, imm   ; next byte is the immediate (Lab 3 walks PC)
-```
+Do not invent your own numbering. That table is the contract your CPU, your
+assembler (Lab 8) and your programs all depend on, and the single most expensive
+bug in this course is a `step()` that advances `PC` by 2 where the table says 3 —
+the machine keeps running and executes operand bytes as instructions.
 
-This week `LOADI` can wait until Lab 3 if you like; `ADD`/`AND`/`HALT`/`NOP` are enough to `step`. The point is: **`step()` reads `mem[pc]`, switches on the opcode, does the bits, advances `pc`.**
+This week you implement the `0x0_` group (`HALT`, `NOP`) and the whole `0x1_`
+group (the ALU). Everything else can wait for its lab. Add your own instructions
+later if you want — [ISA.md §8](ISA.md#8-your-extensions) reserves `0x70`–`0xFF`
+for exactly that.
+
+The shape of `step()` never changes: **read `mem[pc]`, switch on the opcode, do
+the bits, advance `pc` by the size from the table.**
+
+Notice the structure in the numbering: the **high nibble is the group**
+(`0x1_` is the ALU). That is not decoration — it is a bit field, and §4 above is
+how you read it: `group = (op >> 4) & 0x0F`.
 
 ### Prove it to yourself (scratch program or `ember`, ~15 minutes)
 
@@ -128,15 +131,40 @@ Registers `A` and `B` are enough. `PC` is a `uint16_t` into the 4 KB box. Flags:
 Poke `A=7`, `B=1`, bytes `[AND, HALT]`, `step` twice. Dump registers. Then a three-instruction sequence of your own (e.g. `SHL` until carry). Record the trace in the README: each line is `PC mem[PC] → new A/flags`.
 
 **M4 — Decode with masks, not magic.**
-Even if your opcodes are whole bytes this week, write `decode(Byte)` that uses `>>` and `&` to split a packed format **or** document why yours are one-byte opcodes and still extract *something* with a mask (e.g. "high nibble is the group: 0x1x is ALU"). The notes experiment §3 must appear in `cpu.cpp`, not only in a scratch file.
+Write a `decode(Byte)` that splits the opcode into **group** (high nibble) and
+**index** (low nibble) with `>>` and `&`, and use the group to route the `switch`
+— `0x0_` here, `0x1_` there. Not a magic number per instruction: a *field*. The
+notes experiment §3 must appear in `cpu.cpp`, not only in a scratch file.
 
 ### Definition of done
 
 - ALU operations exist as functions that set Z/N/C; wrap is `uint8_t`.
-- `step` implements at least `NOP`, `HALT`, `ADD`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR` (SUB welcome).
+- `step` implements the `0x0_` and `0x1_` groups from [ISA.md](ISA.md), with the opcodes, sizes and flag effects from that table — `HALT`, `NOP`, `ADD`, `SUB`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR`, `INC`, `DEC`.
 - `regs` and a multi-step trace in the README.
 - Decode uses bitwise ops. Precedence bug from §3 was encountered or shown.
 - Repo tagged `lab-02`.
+
+---
+
+## Levels
+
+### Basic — "it steps" (~9–11 hours)
+- ALU functions on `uint8_t` for `ADD`, `SUB`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR`, each returning a value and setting `Z`/`N`/`C`.
+- `regs` prints `PC A B Z N C`.
+- `step` runs `NOP`, `HALT` and `ADD` from bytes you poked with `set`.
+- Your opcode table in the README points at [ISA.md](ISA.md) and lists what you implemented so far.
+- Repo tagged `lab-02`.
+
+### Standard — target (~14–16 hours)
+- Everything in **Definition of done** above.
+- The full `0x1_` group from [ISA.md](ISA.md), including `INC`/`DEC`, with sizes matching the table exactly.
+- `decode()` extracts the group with `(op >> 4) & 0x0F` — a mask and a shift, not a magic number.
+- A trace of a 3+ instruction program in the README: `PC`, opcode, resulting `A` and flags, one line per step.
+- Two worked wrap/carry examples (`200 + 100`, and one of your own).
+
+### Advanced — distinction (~19–21 hours)
+- Everything above, plus `ADD` implemented **as bits** (the notes §5 loop) used as the real ALU, with `uint8_t(a+b)` kept as a Debug assert.
+- A status byte in memory mirroring the flags, so a guest program can read its own flags.
 
 ---
 
@@ -144,7 +172,7 @@ Even if your opcodes are whole bytes this week, write `decode(Byte)` that uses `
 
 - [ ] `alu` functions + flags; two worked wrap/carry examples in the README.
 - [ ] `CPU` with `A`, `B`, `PC`, flags; `step` and `regs`.
-- [ ] Opcode table in the README (the contract for later labs).
+- [ ] The README states which rows of [ISA.md](ISA.md) you have implemented, and lists any extensions of your own in the same format.
 - [ ] Trace of a 3+ instruction poke-program.
 - [ ] Mask/shift decode somewhere in `cpu.cpp`.
 - [ ] Git tag `lab-02`.
@@ -159,12 +187,13 @@ Even if your opcodes are whole bytes this week, write `decode(Byte)` that uses `
 4. Why parenthesize `x & MASK == 0`? What does it evaluate to without parens?
 5. What is a carry flag for, if `uint8_t` already wraps?
 6. Why do instruction sets pack fields into bytes instead of storing "ADD" as text?
+7. `LOADI` does not touch the flags ([ISA.md §3](ISA.md#3-flags)). Why does that mean `LOADI A, 0` followed by `JZ` will not jump?
 
 ---
 
 ## Stretch
 
-Implement **ADD as bits only** (the notes §5 loop) and use it as the real ALU; keep `uint8_t(a+b)` as an assert in Debug. Then add a **status byte** in memory at a fixed address (e.g. `0x0FF`) that mirrors flags as bits, so a program you write later can `LOAD` its own flags. Optional: [Ben Eater's ALU](https://www.youtube.com/watch?v=S-3sWq561PI) — pause and name each chip as one of your functions.
+Implement **ADD as bits only** (the notes §5 loop) and use it as the real ALU; keep `uint8_t(a+b)` as an assert in Debug. Then add a **status byte** at a fixed address in the spare region (e.g. `0xB00` — not inside CODE, where your programs live) that mirrors `Z`/`N`/`C` as bits, so a program you write later can `LOAD` its own flags. Document it in your README as an extension, in [ISA.md](ISA.md) format. Optional: [Ben Eater's ALU](https://www.youtube.com/watch?v=S-3sWq561PI) — pause and name each chip as one of your functions.
 
 ---
 

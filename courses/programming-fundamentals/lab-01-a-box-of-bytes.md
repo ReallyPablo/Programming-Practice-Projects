@@ -5,6 +5,15 @@
 
 **Weeks:** 1–2 · **Language focus:** what a program is, compilation, integer and floating types as *sizes*, overflow, `const`, characters as numbers, a tiny command-line program · **Project step:** a 4 KB box of memory you can dump and poke · **Course:** [EN](README.md) · [UK](README.uk.md) · **Notes:** [theory + experiments](lab-01-a-box-of-bytes.notes.md)
 
+> **Before you start.** Two pages, one evening, once per semester:
+> [інструменти, термінал і git](setup.notes.md), then [C++ за годину](cpp-survival-kit.notes.md).
+> Keep [errors.notes.md](errors.notes.md) open in a tab — it decodes every compiler
+> and sanitizer message this course will throw at you.
+>
+> You do not start from an empty folder. Copy the [starter skeleton](starter/README.md):
+> the prompt loop and the dump are written for you, and four `TODO(lab-01)` markers
+> are yours. Those four are exactly this lab's idea.
+
 ---
 
 ## This lab's feature
@@ -96,57 +105,106 @@ No IDE Run button. The output of `./scratch` is what you compare to the notes' *
 ### Set up the project
 
 ```bash
-mkdir ember && cd ember
+cp -r path/to/programming-fundamentals/starter ~/ember
+cd ~/ember
 git init
-# CMakeLists.txt: C++17, -Wall -Wextra -Werror, sanitizers for Debug
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
-./build/ember          # greeting + prompt; type dump, then quit
+./build/ember          # greeting + prompt; type help, then quit
 ```
 
-Target layout at the end of this lab:
+It builds and runs before you have written a line. That is deliberate: your
+first act this semester is **reading working code**, not staring at an empty
+file.
+
+The layout you get — and keep for all eight labs:
 
 ```txt
 ember/
-  CMakeLists.txt
-  README.md
+  CMakeLists.txt      # C++17, -Wall -Wextra -Werror, ASan+UBSan on Debug
+  README.md           # yours to write; grows every lab
   src/
-    main.cpp          # reads a line, dispatches a command, loops until quit
-    memory.hpp        # const MEM_SIZE = 4096; using Byte = std::uint8_t;
-    memory.cpp        # Memory: a Byte array, get/set with bounds checks
-    dump.cpp          # hex + ASCII dump, like hexdump -C
-    dump.hpp
+    main.cpp          # GIVEN: reads a line, dispatches a command, loops until quit
+    memory.hpp        # GIVEN: const MEM_SIZE = 4096; using Byte = std::uint8_t;
+    memory.cpp        # YOURS: get/set with bounds checks
+    dump.hpp          # GIVEN
+    dump.cpp          # mostly GIVEN: the hex loop. YOURS: the ASCII gutter, show_byte
   .clang-format
-  .gitignore          # build/, .idea/, *.o
+  .gitignore          # build/, *.o
 ```
 
-Use a `struct Memory { Byte data[MEM_SIZE]{}; };` — the `{}` **zeroes** the box. That one brace is the difference between a computer and garbage.
+`main.cpp` uses loops, functions and string handling, which the course only
+teaches in Labs 4, 5 and 7. In Lab 1 you **read** that file; you do not write it.
+Every later lab adds one `else if` branch to the dispatcher that is already there.
+
+Note `struct Memory { Byte data[MEM_SIZE]{}; };` in `memory.hpp` — the `{}`
+**zeroes** the box. That one brace is the difference between a computer and
+garbage, and M4 makes you prove it.
 
 ### Milestones
 
-**M1 — It builds, it runs, sanitizers are on.**
-`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug` then `cmake --build build`. `./build/ember` prints a one-line greeting and a prompt. A `CMakeLists.txt` that does not pass `-fsanitize=address,undefined` on Apple/Linux Debug builds is not done. Paste the greeting + prompt into the README. (Optional: `lldb ./build/ember` in that same terminal — never required.)
+Find your work with one command:
 
-**M2 — The box exists and you can dump it.**
-At the ember prompt, type `dump`. It prints 4096 bytes as hex, 16 bytes per line, with an ASCII gutter (printable `0x20–0x7E`, otherwise `.`). Address column in hex. After a fresh start the dump is all zeroes — *prove it* by pasting the first three lines of terminal output into the README.
+```bash
+grep -rn "TODO(lab-01)" src/
+```
+
+**M1 — It builds, it runs, sanitizers are on.**
+`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug` then `cmake --build build`. `./build/ember` prints a one-line greeting and a prompt. A `CMakeLists.txt` that does not pass `-fsanitize=address,undefined` on Apple/Linux Debug builds is not done. Paste the greeting + prompt into the README. Then open `src/main.cpp` and read it top to bottom — you should be able to say, out loud, what each of the five `else if` branches does. (Optional: `lldb ./build/ember` in that same terminal — never required.)
+
+**M2 — The box is visible.**
+`dump` already prints 4096 bytes as hex, 16 bytes per line, with an address column. The ASCII gutter is the first `TODO`: a printable byte (`0x20–0x7E`) shows as itself, anything else as `.`. After a fresh start the dump is all zeroes — *prove it* by pasting the first three lines of terminal output into the README.
 
 **M3 — Peek and poke.**
-`set <addr> <value>` writes a byte (`value` accepted as decimal or `0x` hex). `get <addr>` prints that byte as **decimal, hex, binary, and character**. Reject addresses `>= 4096` with a message; do not crash. *Check:* `set 0 65` then `get 0` shows `65  0x41  0b01000001  'A'`.
+Three `TODO`s: `mem_get` and `mem_set` reject addresses `>= 4096` instead of touching memory, and `show_byte` prints one byte as **decimal, hex, binary, and character**. *Check:* `set 0 65` then `get 0` shows
+
+```txt
+65  0x41  0b01000001  'A'
+```
+
+Then `set 5000 1` and confirm it says so instead of crashing.
 
 **M4 — Break it on purpose, then write it down.**
 Three experiments, evidence in the README:
 
-1. `set 0 255` then mentally add one (or a tiny `inc` command). Show wrap to 0. Contrast with a *signed* `int` overflow compiled with UBSan (snippet from theory §3).
+1. `set 0 255`, then `get 0`, then add a three-line `inc <addr>` command to the dispatcher that reads a byte, adds one, and writes it back. `inc 0` then `get 0` shows `0`, not `256`: the byte wrapped. Contrast that with a *signed* `int` overflow compiled with UBSan (snippet from theory §3), which is undefined behaviour and gets you a report.
 2. Run notes §3 (`scratch.cpp` + `c++ … && ./scratch`) and explain why `== 0.3` fails — one paragraph, not a IEEE-754 essay.
-3. `set 0 65` / `set 1 66` / `set 2 0` and dump — you have a C-string `"AB"` sitting in memory. Note the `0` that terminates it. Lab 5 will care.
+3. `set 0 65` / `set 1 66` / `set 2 0` and dump — the gutter shows `|AB..............|`. You have a C-string `"AB"` sitting in memory. Note the `0` that terminates it. Lab 5 will care.
+4. Delete the `{}` from `Byte data[MEM_SIZE]{}` in `memory.hpp`, rebuild, `dump`. Paste what you see. **Put the brace back** — reading uninitialized memory is undefined behaviour, and this course does not ship UB.
 
 ### Definition of done
 
 - The project builds with C++17, warnings-as-errors, and sanitizers in Debug.
-- `dump` / `get` / `set` / `quit` work; out-of-range addresses are rejected.
+- No `TODO(lab-01)` markers left in `src/`.
+- `dump` / `get` / `set` / `inc` / `quit` work; out-of-range addresses are rejected.
 - `get` shows four views of the same byte.
-- The three experiments are in the README with **pasted terminal output**.
+- The four experiments are in the README with **pasted terminal output**.
 - Repo tagged `lab-01`.
+
+---
+
+## Levels
+
+Pick a landing spot before you start. **Standard is the target**; Basic is a real,
+passing lab, not a failure. Hours are for a first-year working alone.
+
+### Basic — "the box is honest" (~8–10 hours)
+- The [starter skeleton](starter/README.md) builds with C++17, `-Werror` and sanitizers on Debug.
+- All four `TODO(lab-01)` markers are gone: `mem_get`, `mem_set`, the ASCII gutter, `show_byte`.
+- `dump`, `get`, `set`, `quit` work; out-of-range addresses are rejected with a message.
+- README has your `sizeof` table and pasted `dump` / `get` output.
+- Repo tagged `lab-01`.
+
+### Standard — target (~14–16 hours)
+- Everything in **Definition of done** above.
+- Notes §§1–4 run and written up, in your own words.
+- The three M4 breakages documented with pasted terminal output: unsigned wrap, `0.1 + 0.2`, and `"AB\0"` visible in a dump.
+- README explains *why* an `ember` cell is `std::uint8_t` and not `int`.
+
+### Advanced — distinction (~20 hours)
+- Everything above, plus the Stretch: `set16` and the endianness answer, proven with a dump.
+- `.clang-format` chosen and applied to the whole tree.
+- Optional: the same `int x = 65;` in Compiler Explorer, with the instruction identified.
 
 ---
 
@@ -154,9 +212,9 @@ Three experiments, evidence in the README:
 
 - [ ] CMake project, C++17, `-Wall -Wextra -Werror`, ASan+UBSan on Debug (Unix).
 - [ ] `Memory` of 4096 zeroed bytes; bounds-checked `get`/`set`.
-- [ ] `dump` in hex + ASCII; `get` in dec/hex/bin/char; `quit`.
+- [ ] `dump` in hex + ASCII; `get` in dec/hex/bin/char; `inc`; `quit`.
 - [ ] sizeof table and `dump`/`get` output pasted from the terminal.
-- [ ] Experiments 1–3 documented.
+- [ ] Experiments 1–4 documented.
 - [ ] Git tag `lab-01`.
 
 ---
@@ -170,6 +228,7 @@ Three experiments, evidence in the README:
 5. The bits `01000001` — give three types you might use to read them, and what you'd "see."
 6. What is the difference between a literal, a `const`, and a variable? Why initialize?
 7. What does AddressSanitizer buy you that a passing "it printed 42" test does not?
+8. In `main.cpp`, which line decides *which* command runs? What happens to a line you did not teach it?
 
 ---
 

@@ -2,7 +2,7 @@
 
 > "A pointer is a variable whose value is an address. Everything else is consequences."
 
-**Weeks:** 5–6 · **Language focus:** addresses, `&` and `*`, typed vs `void*`, `sizeof`, pointer arithmetic, null, the difference between a name and a location · **Project step:** `LOAD`/`STORE`, immediates, a PC that *walks* memory · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 02](lab-02-bits-dont-lie.md) · **Notes:** [theory + experiments](lab-03-addresses-not-names.notes.md)
+**Weeks:** 5–6 · **Language focus:** addresses, `&` and `*`, typed vs `void*`, `sizeof`, pointer arithmetic, null, the difference between a name and a location · **Project step:** `LOAD`/`STORE`, immediates, the address register `H`, a PC that *walks* memory · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 02](lab-02-bits-dont-lie.md) · **Notes:** [theory + experiments](lab-03-addresses-not-names.notes.md)
 
 ---
 
@@ -13,6 +13,10 @@ Last week the CPU added registers. Registers are names. Memory is a street of nu
 In C++, `&x` is "the address of `x`." `*p` is "the thing at address `p`." `p + 1` is not "one more byte" — it is "one more *element of the type `p` points at*." That last sentence is the entire subject of pointer arithmetic, and it is why `ember`'s program counter is a `uint16_t` index into `Byte data[4096]`, not a host `int*` you increment casually.
 
 This lab makes the VM a von Neumann machine: **instructions and data live in the same box.** `PC` is an address. `LOAD A, [addr]` copies a byte from memory into a register. `STORE [addr], A` copies the other way. `LOADI A, imm` reads the *next* byte after the opcode — which means `step` must increment `PC` by more than one. You will also meet `void*` and `sizeof`, and you will let AddressSanitizer yell when you walk off the array on purpose.
+
+And `ember` grows a register that is **not** a value: **`H`**, sixteen bits wide, whose whole job is to hold an address. `LOAD A, [H]` follows it; `INCH` walks it to the next cell. `A` and `B` hold numbers; `H` holds *where*. That is a pointer, built into the hardware — and it is the reason a program can loop over memory at all, instead of only touching addresses it knew when it was assembled.
+
+This is also the lab where the [memory map](ISA.md#2-memory-map) starts to matter: code lives at `0x000`, your data at `0x800`. Two regions, one box.
 
 What this lab is not: "bypass strict typing" by casting a `float*` to `int*` and pretending you decoded the bits. That is undefined behaviour. The honest way to see a float's bytes is `std::memcpy` into a `uint32_t` (or a dump of `ember` memory you stored them in). Sanitizers stay on.
 
@@ -68,9 +72,39 @@ Or `set` the four bytes into `ember` and dump them. Same insight, no UB.
 2. decode;
 3. if the instruction has an immediate, `Byte imm = mem.get(cpu.pc + 1);`
 4. execute;
-5. `cpu.pc += size_of_this_instruction`.
+5. `cpu.pc += size_of_this_instruction` — the size from [ISA.md](ISA.md), not a guess.
 
-`LOAD A, [addr]` needs a 16-bit address: two bytes, little-endian (you discovered endianness in Lab 1 Stretch; do it for real now). `STORE` is the inverse. After this, a program can put data at `0x0100` and code at `0x0000` and *find* the data by address.
+`LOAD A, [addr]` needs a 16-bit address: two bytes, little-endian (you discovered endianness in Lab 1 Stretch; do it for real now). `STORE` is the inverse. After this, a program can put data at `0x800` and code at `0x000` and *find* the data by address.
+
+### 6. `H` — a pointer the CPU can hold
+
+`LOAD A, [0x0800]` has the address baked into the instruction. To walk an array
+you need an address the program can **change**, and eight bits are not enough to
+reach 4096 cells. So the CPU gets a 16-bit register whose value is an address:
+
+```txt
+LOADH H, 0x0800     ; H now points at the first byte of the data region
+LOAD  A, [H]        ; A = mem[H]        -- *p
+INCH                ; H = H + 1         -- ++p
+LOAD  A, [H]        ; the next cell
+```
+
+Compare with the C++ on the left of your screen:
+
+```cpp
+Byte* p = &mem.data[0x800];
+Byte a = *p;
+++p;
+a = *p;
+```
+
+Same three ideas, two notations: a register that holds a location, an operation
+that follows it, an operation that moves it. `INCH` moves `H` by **one byte**
+because an `ember` cell is one byte — which is exactly why `p + 1` on an `int*`
+moves four. Pointer arithmetic counts *elements*, and here the element is a byte.
+
+You will not write a loop yet — jumps arrive in [Lab 4](lab-04-the-shape-of-control.md).
+This week `H` is stepped by hand, and that is enough to see it.
 
 ### Prove it to yourself (notes §§1–4)
 
@@ -87,38 +121,61 @@ Or `set` the four bytes into `ember` and dump them. Same insight, no UB.
 ### Milestones
 
 **M1 — Guest addresses are numbers.**
-`get`/`set` already take an address. Add `get16`/`set16` little-endian. `regs` also prints `PC`. Document endianness with a dump: `set16 0 0x1234` → bytes `34 12`.
+`get`/`set` already take an address. Add `get16`/`set16` little-endian. `regs` also prints `PC` and `H`. Document endianness with a dump: `set16 0 0x1234` → bytes `34 12`. Little-endian is not a style choice here: [ISA.md §4](ISA.md#4-encoding) says every 16-bit operand in the instruction stream is stored low byte first, so `LOADH H, 0x0A00` assembles to `28 00 0A`.
 
-**M2 — `LOADI`, `LOAD`, `STORE`.**
-Extend the opcode table (README). Examples:
+**M2 — The `0x2_` group.**
+Implement [ISA.md](ISA.md) rows `0x20`–`0x2C`: `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `MOV`, and the address register — `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. Plus `OUT` (`0x02`) and `OUTN` (`0x03`) from the control group, so a program can say something.
 
-- `LOADI A, imm8` — opcode + 1 byte, `A = imm`, `PC += 2`
-- `LOAD A, [imm16]` — opcode + 2 bytes address, `A = mem[addr]`, `PC += 3`
-- `STORE [imm16], A` — inverse
-
-`step` must not run off the end of memory: if `PC` would fetch past `MEM_SIZE`, halt with an error (this is a bounds-checked pointer).
+Sizes come from the table. `step` must not run off the end of memory: if `PC` would fetch past `MEM_SIZE`, halt with an error (this is a bounds-checked pointer).
 
 **M3 — A program that uses data.**
-Poke at `0x0100` the bytes of a message (`65 66 67 0` — `ABC`). At `0x0000`, a program: load from `0x0100` into `A`, `OUT` (print `A` as char — add a one-line `OUT` that writes to stdout), halt. Run with `run` (step until `HALT`). Paste the terminal line that prints `A` (the letter) and the `dump` of both regions.
+Poke at `0x800` the bytes of a message (`65 66 67 0` — `ABC`). At `0x000`, a program that loads from `0x800` into `A`, `OUT`s it, and halts. Run with `run` (step until `HALT`). Paste the terminal line that prints `A` and the `dump` of both regions.
+
+Then do it a second time **through `H`**: `LOADH H, 0x0800`, `LOAD A, [H]`, `OUT`, `INCH`, `LOAD A, [H]`, `OUT`, `HALT` — and watch `regs` show `H` moving. The output is `AB`. Those seven instructions are the loop you will write for real in Lab 4.
 
 **M4 — The host pointer vs the guest address.**
-In the README: one paragraph on why `CPU` holds `Memory*` (host pointer to the whole box) and `uint16_t pc` (guest address), not a `Byte* pc` into `data`. Then: temporarily write a 3-line program that does `data[MEM_SIZE] = 1` (off-by-one). Paste the ASan report. Restore the bounds check. That report is the deliverable.
+In the README: one paragraph on why `CPU` holds `Memory*` (host pointer to the whole box) plus `uint16_t pc` and `uint16_t h` (guest addresses), not `Byte*` pointers into `data`. Note that `H` is a pointer you can dump: it is a number inside the machine, so a guest program can compute with it. A host `Byte*` is meaningless to the guest and different on every run.
+
+Then: temporarily write a 3-line program that does `data[MEM_SIZE] = 1` (off-by-one). Paste the ASan report — [errors.notes.md §3](errors.notes.md) explains which three lines of it matter. Restore the bounds check. That report is the deliverable.
 
 ### Definition of done
 
 - `get16`/`set16` little-endian; documented.
-- `LOADI`, `LOAD`, `STORE`, `OUT`; `run` until HALT.
-- A program that loads data from a different region than code.
+- The `0x2_` group from [ISA.md](ISA.md), plus `OUT` and `OUTN`; `run` until HALT.
+- A program that loads data from a different region than code, once with an absolute address and once through `H`.
 - ASan off-by-one captured and fixed; host vs guest explained.
 - Repo tagged `lab-03`.
+
+---
+
+## Levels
+
+### Basic — "the CPU can reach memory" (~10–12 hours)
+- `get16` / `set16`, little-endian, documented with a dump.
+- `LOADI A/B`, `LOAD`, `STORE`, `OUT` from [ISA.md](ISA.md), with the sizes from the table.
+- `run` executes until `HALT` or an error.
+- A program with code at `0x000` and data at `0x800` that prints a character.
+- Repo tagged `lab-03`.
+
+### Standard — target (~15–17 hours)
+- Everything in **Definition of done** above.
+- The address register `H`: `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`. This is the lab's whole idea in hardware — a register that holds an address instead of a value.
+- `OUTN` as well as `OUT`.
+- An ASan report for a deliberate off-by-one, pasted, then fixed.
+- One paragraph in the README: host pointer vs guest address, and a bug that mixing them would cause.
+
+### Advanced — distinction (~20 hours)
+- Everything above, plus a `void dump(const void* ptr, std::size_t n)` that hexdumps any host object — `dump(&cpu, sizeof(cpu))`.
+- A four-byte copy loop driven by `H`, stepped by hand and traced.
 
 ---
 
 ## Deliverable checklist
 
 - [ ] 16-bit little-endian memory accessors.
-- [ ] `LOADI` / `LOAD` / `STORE` / `OUT`; `run`.
-- [ ] Code at `0x0000`, data at `0x0100`, a trace in the README.
+- [ ] `LOADI` / `LOAD` / `STORE` / `MOV` / `OUT` / `OUTN`; `run`.
+- [ ] `H`, `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`; `regs` shows `H`.
+- [ ] Code at `0x000`, data at `0x800`, a trace in the README.
 - [ ] ASan report for an off-by-one, then the fix.
 - [ ] Git tag `lab-03`.
 
@@ -132,12 +189,16 @@ In the README: one paragraph on why `CPU` holds `Memory*` (host pointer to the w
 4. Why is reading a `float` through an `int*` undefined, and what do you do instead?
 5. What is the difference between a host pointer and a guest address in `ember`? Give a bug that mixing them would cause.
 6. `inc(int x)` vs `inc(int* p)` — which one can the callee use to change the caller's `x`, and why?
+7. `A` is 8 bits, `H` is 16. Why can `H` not be 8 bits? What is the largest address a byte can name?
+8. Write `LOAD A, [H]` / `INCH` as two lines of C++ with a `Byte*`. Which one is `*p` and which is `++p`?
 
 ---
 
 ## Stretch
 
-Add **register-indirect**: `LOAD A, [B]` — `B` holds the guest address. Then write a tiny loop (Lab 4 will give you `JMP`; you can still `step` by hand) that copies four bytes. Optional: a `void dump(const void* ptr, std::size_t n)` that hexdumps any host object (`dump(&cpu, sizeof(cpu))`) — that's `void*` earning its keep.
+A `void dump(const void* ptr, std::size_t n)` that hexdumps any host object — `dump(&cpu, sizeof(cpu))` shows you your own CPU as bytes. That's `void*` earning its keep, and it previews Lab 6's question about struct layout.
+
+Then: a four-byte copy driven entirely by `H` and `MOV`, stepped by hand, traced in the README. Or add `HLOW` ([ISA.md](ISA.md) `0x2D`) so a program can print how far `H` has walked.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > "A function is a named jump with a promise to come back. The stack is how the promise is kept."
 
-**Weeks:** 13–14 · **Language focus:** functions, pass-by-value vs pointer vs reference, headers and translation units, the call stack, recursion · **Project step:** a `Stack` ADT, `CALL`/`RET`, recursive Fibonacci in bytecode · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 06](lab-06-named-bundles.md) · **Notes:** [theory + experiments](lab-07-call-and-return.notes.md)
+**Weeks:** 13–14 · **Language focus:** functions, pass-by-value vs pointer vs reference, headers and translation units, the call stack, recursion · **Project step:** a `Stack` ADT, `SP`, `PUSH`/`POP`, `CALL`/`RET`, recursive factorial in bytecode · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 06](lab-06-named-bundles.md) · **Notes:** [theory + experiments](lab-07-call-and-return.notes.md)
 
 ---
 
@@ -10,9 +10,11 @@
 
 You have been writing functions since Lab 1 (`main`, `dump`, `step`). This week they become a **subject**: a function has a name, parameters, a return value or `void`, and a **frame** on the call stack. Passing `CPU` by value would copy the machine every `step` — so you pass `CPU&`. Passing `int x` copies the number; the callee cannot change the caller's `x`. That is not a style rule. It is how the stack works.
 
-Then you implement the same idea *inside* ember. **`CALL addr`** pushes `PC` (the return address) onto a **stack** and sets `PC = addr`. **`RET`** pops into `PC`. Recursion is a function that `CALL`s itself. Fibonacci will grow the stack until it returns, or until it overflows — and you will show both.
+Then you implement the same idea *inside* ember. The machine grows a stack pointer **`SP`** and a stack region at `0xF00`–`0xFFF` ([ISA.md §2](ISA.md#2-memory-map)). **`PUSH A`** puts a byte there; **`POP A`** takes it back. **`CALL addr`** pushes the return address and sets `PC = addr`. **`RET`** pops it back. Recursion is a function that `CALL`s itself — it works because each call's data sits at a different place on the stack, and it stops working when the stack runs out, which you will also show.
 
-Older packs split "closed subprograms," "procedures vs functions," "headers," and "recursion as extra credit." Here they are one lab, because they are one mechanism. The **ADT** is `Stack`: `push` / `pop` / `empty` / `full`, vector or linked — you pick, you hide the representation behind `stack.hpp`.
+Functions, headers, ADTs and recursion are one lab here because they are one mechanism. The **ADT** is `Stack`: `push` / `pop` / `empty` / `full`, array or linked — you pick, you hide the representation behind `stack.hpp`.
+
+You write **factorial** this week, not Fibonacci. Recursive `fact(5)` is about fifteen instructions; recursive `fib` is about forty, and hand-assembling forty bytes with hand-computed jump targets teaches hexadecimal arithmetic, not recursion. `fib` is [Lab 8](lab-08-give-it-a-language.md)'s deliverable, written in the assembly language you are two weeks away from having. The mechanism you build now is what makes it possible.
 
 ---
 
@@ -51,9 +53,28 @@ int fact(int n) {
 }
 ```
 
-Without a base case, stack overflow. Tail recursion is a special case compilers *may* turn into a loop; do not count on it. Fibonacci naive recursion is exponentially slow — that is a feature for the lab: `fib(10)` is fine, `fib(40)` is a lecture on why stacks and time both matter.
+Without a base case, stack overflow. Tail recursion is a special case compilers *may* turn into a loop; do not count on it.
 
-Guest `fib`: `CALL` itself with `A` holding `n`, use the stack for return addresses *and* (if you need) spilled `n`. Document the calling convention in the README: **who saves `A`, where `n` lives.**
+Guest `fact`: `CALL` itself with `A` holding `n`. The machine gives you a stack for return addresses; **everything else you must save yourself**. Concretely, `fact` needs `n` back after the recursive call has finished stomping on `A` — so it pushes it first:
+
+```txt
+fact:   CMP   A, one        ; is n <= 1 ?
+        JZ    base
+        PUSH  A             ; save n, because the call will destroy A
+        DEC   A             ; n - 1
+        CALL  fact          ; A = fact(n-1)
+        POP   B             ; B = the n we saved
+        ...                 ; A = A * B  -- you have no MUL. See M3.
+        RET
+base:   LOADI A, 1
+        RET
+```
+
+That `PUSH` before the call and `POP` after it *is* what a stack frame is. Real compilers emit the same two instructions for the same reason; they just also have a name for the region between them.
+
+The calling convention — argument in `A`, result in `A`, `B` and `H` caller-saved — is written down once, in [ISA.md §6](ISA.md#calling-convention). Restate it in your own README. Two functions that disagree about who saves `B` is the defining bug of this lab, and it is invisible until you can point at the rule.
+
+Fibonacci without memoisation is exponentially slow: `fib(10)` is fine, `fib(40)` is a lecture on why stacks and time both matter. You will write it in [Lab 8](lab-08-give-it-a-language.md), in text, with labels the assembler resolves for you.
 
 ### 4. Headers are promises; `.cpp` files keep them
 
@@ -89,33 +110,63 @@ bool pop(Stack& s, std::uint16_t& out);
 
 ### Milestones
 
-**M1 — `Stack` ADT.**
-`stack.hpp` / `stack.cpp`. `push`/`pop` return `bool` (success). Commands `push <v>` / `pop` for host-level demo, **or** only used by the CPU — but unit-test them somehow (`ember` command `stack` that prints `top` and the 8 nearest values). Overflow/underflow messages, no crash.
+**M1 — `SP`, `PUSH`, `POP`, and the `Stack` ADT.**
+`SP` starts at `0xFFF`; the stack region is `0xF00`–`0xFFF`. Implement `PUSH A`, `POP A`, `PUSH B`, `POP B` ([ISA.md](ISA.md) `0x50`–`0x53`), empty-descending as the table describes.
+
+Put the push/pop logic behind an ADT in `stack.hpp` / `stack.cpp` — `push`/`pop` returning `bool` for success — so that `cpu.cpp` never touches the stack representation directly. Add an `ember` command `stack` that prints `SP` and the top few bytes, so you can see it.
+
+Overflow (below `STACK_LO`) and underflow (above `STACK_HI`) stop the machine with **your** message. Never a host crash, never a silent wrap.
 
 **M2 — `CALL` / `RET`.**
-Guest stack in a reserved region (e.g. growing down from `0x0BFF`) **or** the host `Stack` of return addresses — pick one, document. `CALL imm16`: push `PC+3` (or whatever the instruction size is), `PC = imm16`. `RET`: pop `PC`. A program: `CALL printA` then `HALT`, `printA: OUT; RET`. Trace.
+Exactly as [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly) specifies: push low byte then high byte of `PC + 3`, pop high then low. A program: `CALL printA`, `HALT`; `printA: OUT`, `RET`. Trace it in the README — one line per step with `PC`, `SP`, and the two stack bytes. Say out loud why the pushed address is `PC + 3` and not the address of the `CALL` itself.
 
-**M3 — Recursion.**
-Fibonacci or factorial in poked bytecode (Lab 8 will let you write assembly). `fib(6)` = 8. README: calling convention, a trace of stack depth, and **one overflow**: `fib` with a tiny `CAP` or a missing `RET`, sanitizer or your own "stack overflow" error.
+**M3 — Recursion: `fact`.**
+Recursive factorial in poked bytecode. `fact(5)` = 120.
+
+You have no `MUL`, and that is on purpose — write one. Either a helper subroutine (`mul: A = A * B` by repeated addition, which is a loop you already know how to write) or a new opcode of your own in the `0x7_` range, documented in your README in [ISA.md](ISA.md) format. Say which you chose and why.
+
+In the README: your calling convention, a trace showing `SP` at each depth, and **one deliberate overflow** — remove the base case, or shrink the stack region — caught by your own error, not by a host crash.
 
 **M4 — Split the binary.**
 At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display` if you have it). No giant `main.cpp`. A `CMakeLists.txt` that lists them. The defense may ask "why is `push` not in `cpu.cpp`?"
 
 ### Definition of done
 
-- `Stack` ADT with overflow/underflow handled.
-- `CALL`/`RET` work; a non-recursive call demo.
-- Recursive `fib` or `fact` in bytecode; result checked; overflow demonstrated.
+- `SP`, `PUSH`/`POP`, and a `Stack` ADT with overflow/underflow handled.
+- `CALL`/`RET` match [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly) byte for byte; a non-recursive call demo, traced.
+- Recursive `fact(5) = 120` in bytecode; calling convention written down; overflow demonstrated.
 - Multiple `.cpp`/`.hpp` files; CMake lists them.
 - Repo tagged `lab-07`.
 
 ---
 
+## Levels
+
+### Basic — "a call comes back" (~10–12 hours)
+- `SP` starts at `0xFFF`; `PUSH A` / `POP A` / `PUSH B` / `POP B` per [ISA.md](ISA.md).
+- Overflow below `0xF00` and underflow above `0xFFF` stop the machine with a message. No crash, no silent wrap.
+- `CALL` / `RET` with the byte order from [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly), and a one-level call demo (`CALL printA` / `OUT` / `RET` / `HALT`) traced in the README.
+- The project is split across at least four translation units, all listed in `CMakeLists.txt`.
+- Repo tagged `lab-07`.
+
+### Standard — target (~14–16 hours)
+- Everything in **Definition of done** above.
+- The `Stack` ADT: `stack.hpp` / `stack.cpp`, `push`/`pop` returning `bool`, and nothing outside `stack.cpp` touching the representation.
+- Recursive **factorial** in poked bytecode, `fact(5) = 120`, following the calling convention from [ISA.md §6](ISA.md#calling-convention) — and that convention restated in your own README.
+- One deliberate stack overflow (a missing `RET`, or a tiny stack region), with your own error message, not a host crash.
+
+### Advanced — distinction (~18–19 hours)
+- Everything above, plus `PUSH H` / `POP H` and a function that needs them.
+- A `queue` ADT, or a linked-node `Stack` behind the same interface, with one advantage of each written down.
+- Optional: tail-recursive vs naive `fact` in Godbolt — did the compiler turn one into a loop?
+
+---
+
 ## Deliverable checklist
 
-- [ ] `stack.hpp`/`cpp`; push/pop fail cleanly.
-- [ ] `CALL`/`RET`; trace of a one-level call.
-- [ ] Recursive program; convention documented; overflow shown.
+- [ ] `SP` + `PUSH`/`POP`; `stack.hpp`/`cpp`; push/pop fail cleanly.
+- [ ] `CALL`/`RET`; trace of a one-level call showing `PC` and `SP`.
+- [ ] Recursive `fact`; multiplication solved and documented; convention documented; overflow shown.
 - [ ] Project split across headers; CMake updated.
 - [ ] Git tag `lab-07`.
 
@@ -129,12 +180,20 @@ At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display
 4. What does `RET` pop, and why must `CALL` push `PC` *after* the instruction, not the opcode address?
 5. Array stack vs linked stack: one advantage each. Which did you pick and why?
 6. What is a header guard / `#pragma once` for? What does the linker error "multiple definition" mean?
+7. In guest `fact`, why must `n` be pushed *before* the recursive `CALL`? What does the program print if you forget?
+8. The stack grows down from `0xFFF`, the heap grows up from `0xC00`. On a machine with no fence between them, what does "stack overflow" actually corrupt?
 
 ---
 
 ## Stretch
 
-Queue ADT and an opcode `SEND`/`RECV` (too cute — skip unless you want I/O). Tail-recursive `fact` vs naive, Godbolt, see if the compiler turned it into a loop. `inline` vs a normal function: look at Godbolt, don't `#define` macros that evaluate `x++` twice. Templates: `template<typename T> void swap(T& a, T& b)` as a 5-line extra, not a second project.
+`PUSH H` / `POP H` ([ISA.md](ISA.md) `0x56`/`0x57`) and a subroutine that needs them — one that walks memory and must restore the caller's pointer.
+
+A linked-node `Stack` behind the same `stack.hpp` interface; swap the implementation without touching `cpu.cpp` and write down one advantage of each. That swap *is* what an ADT buys you.
+
+Tail-recursive `fact` vs naive in [Godbolt](https://godbolt.org/) — did the compiler turn one into a loop? `inline` vs a normal function; and don't `#define` macros that evaluate `x++` twice. Templates: `template<typename T> void swap(T& a, T& b)` as a five-line extra, not a second project.
+
+If `fact` came out clean and you want more: sketch recursive `fib` as bytecode on paper and count the instructions. Then stop — you are meant to feel that, and [Lab 8](lab-08-give-it-a-language.md) is the answer.
 
 ---
 

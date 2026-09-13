@@ -10,18 +10,20 @@
 
 A program that only runs top to bottom is a calculator. A **computer** can skip, repeat, and choose. In C++ those shapes are `if`, `switch`, and the loops. In a CPU they are **jumps**: write a new value into `PC`.
 
-That translation is the lecture. `while (A != 0) { A = A - 1; }` is, in ember:
+That translation is the lecture. `while (a != 0) { a = a - 1; }` is, in ember, four instructions:
 
 ```txt
-loop:  LOAD  A, [count]
-       JZ    done
-       SUB   A, one
-       STORE [count], A
-       JMP   loop
-done:  HALT
+       LOADI A, 3
+loop:  OUTN              ; print A
+       DEC   A           ; sets Z when A reaches 0
+       JNZ   loop
+       HALT
 ```
 
-You will implement `JMP` (always) and `JZ`/`JNZ` (if Z is set / not set — Lab 2's flags finally do work). Then you will write a **linear search**: given a byte `P` and a region of memory, find the first index where `mem[i] == P`, or report miss. The sequence is `ember`'s RAM. The loop exists twice: in C++ (`step` is a loop) and as guest instructions.
+The assembled bytes and the address of each line are in
+[ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) — check yours against them.
+
+You will implement `JMP` (always) and `JZ`/`JNZ` (if Z is set / not set — Lab 2's flags finally do work), plus `CMP`, which subtracts without storing so that `JZ` has something to read. Then you will write a **linear search**: given a byte and a region of memory, find the first address holding it, or report miss. The sequence is `ember`'s RAM, walked with the `H` register from Lab 3. The loop exists twice: in C++ (`step` is a loop) and as guest instructions.
 
 Scope is the other half. A name lives in a `{ }` block. The same identifier in an inner block **shadows** the outer one. `static` local variables survive across calls; ordinary locals die when the block ends. Print both with `std::cout` in the notes snippet; then stop using `static` as a party trick.
 
@@ -61,7 +63,23 @@ std::uint16_t find(const Memory& mem, std::uint16_t lo, std::uint16_t hi, Byte n
 
 If the region is **sorted**, you may stop early when `mem.get(i) > needle` — that is still linear, just a shorter average. Binary search can wait; understanding *this* loop is the lab.
 
-You will write this twice: in C++ (a `find` command) and as an ember program using `LOAD`/`SUB`/`JZ`/`JMP`.
+You will write this twice. In C++ it is the `find` command above. In `ember` it is the same four moves, spelled with the instructions you now have — `H` is `i`, `INCH` is `++i`, `CMP` is `==`, `JZ` is the `if`:
+
+```txt
+        LOADH H, 0x0800      ; i = lo
+        LOADI B, 0x41        ; the needle
+loop:   LOAD  A, [H]         ; mem[i]
+        CMP   A, B           ; sets Z if equal
+        JZ    found
+        INCH                 ; ++i
+        ...                  ; stop at hi -- how you detect that is yours
+        JMP   loop
+found:  HLOW                 ; or however you choose to report the index
+        OUTN
+        HALT
+```
+
+Two things are deliberately left to you: how the loop knows it reached `hi`, and how it reports a miss. Both have more than one right answer; pick one, write it in the README, and be ready to defend it.
 
 ### 4. Scope, lifetime, and the membrane
 
@@ -97,19 +115,27 @@ int x = 1;
 Every known opcode is a `case`. `default:` sets an error: "unknown opcode 0x.." and halt. No silent NOP for garbage. This is `switch` used as a decoder, which is what it's for.
 
 **M2 — Jumps.**
-- `JMP imm16` — `PC = addr` (do **not** then add 3).
-- `JZ imm16` — if `flags.z` then `PC = addr`, else `PC += 3`.
-- `JNZ` similarly.
-- `CMP A, B` (or `SUB` without storing) that only sets flags — useful so `JZ` has something to read.
+The `0x3_` group from [ISA.md](ISA.md), plus `CMP` (`0x1A`):
 
-`run` has a max-steps guard. Document it.
+- `JMP addr16` — `PC = addr`. Do **not** then add 3. This is the single most common bug in this lab.
+- `JZ addr16` — if `Z` then `PC = addr`, else `PC += 3`.
+- `JNZ addr16` — the other way round.
+- `CMP A, B` — compute `A - B`, set `Z`/`N`/`C`, throw the result away.
+
+Remember [ISA.md §3](ISA.md#3-flags): `LOAD` and `LOADI` do **not** set flags. A `JZ` straight after a `LOAD` reads whatever the last ALU instruction left behind.
+
+`run` has a max-steps guard. Document the limit and what it prints when it trips.
 
 **M3 — A loop in bytecode.**
-A program that sets `A = 3` and counts down to 0, `OUT` each value. Trace in the README: each `step`'s `PC` and `A`. Then the equivalent C++ `while`. Same shape.
+The countdown from [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against): poke the seven bytes, `run`, get `3 2 1`. Trace in the README: one line per `step` with `PC`, `A` and `Z`. Then the equivalent C++ `while` beside it. Same shape, two notations.
 
 **M4 — Linear search, twice.**
 1. Command `find <lo> <hi> <byte>` implemented with the C++ loop above.
-2. An ember program (poked bytes, or a listing in the README you enter with `set`) that searches a 8-byte region for `0x41` and `OUT`s the index (or `0xFF` for miss). You may `step` it in the defense.
+2. An ember program (poked bytes, or a listing in the README you enter with `set`) that searches an 8-byte region at `0x800` for `0x41` and reports where it found it, or that it did not. You may `step` it in the defense.
+
+Write both listings in the README with an address column, the way
+[ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) does. You will thank
+yourself in Lab 8, when the assembler has to produce exactly those bytes.
 
 ### Definition of done
 
@@ -118,6 +144,28 @@ A program that sets `A = 3` and counts down to 0, `OUT` each value. Trace in the
 - Countdown trace in the README next to the C++ `while`.
 - `find` command + a guest search program.
 - Repo tagged `lab-04`.
+
+---
+
+## Levels
+
+### Basic — "it can loop" (~8–10 hours)
+- `step` is a total `switch`: every known opcode has a `case`, `default` reports `unknown opcode 0x..` and halts.
+- `JMP`, `JZ`, `JNZ`, `CMP` from [ISA.md](ISA.md). A taken jump sets `PC` and does **not** also add the size.
+- `run` has a documented max-step limit, so a bad `JMP` cannot hang the process.
+- The countdown program from [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) runs and prints `3 2 1`.
+- Repo tagged `lab-04`.
+
+### Standard — target (~14–15 hours)
+- Everything in **Definition of done** above.
+- The countdown traced in the README (`PC`, `A`, `Z` per step) next to the equivalent C++ `while`. Same shape, two notations.
+- A `find <lo> <hi> <byte>` command written as a C++ loop.
+- The same linear search as a guest program, walking memory with `H` and `INCH`, printing the index or a miss marker.
+
+### Advanced — distinction (~18 hours)
+- Everything above, plus `JC` / `JNC`, or `JG` / `JL` with signed comparison carefully defined.
+- A `b <addr>` breakpoint command: `run` until `PC == addr`.
+- Optional: a nested C++ loop in Godbolt with the `jmp` / `jcc` identified.
 
 ---
 
@@ -139,6 +187,8 @@ A program that sets `A = 3` and counts down to 0, `OUT` each value. Trace in the
 4. `while` vs `do-while` vs `for` — which is the countdown, and could they all do it?
 5. What does short-circuit buy you with pointers? What does it cost with functions that have side effects?
 6. Explain shadowing with two boxes named `x`. When is `static int c` still alive after the block?
+7. Why does a taken `JMP` not also add 3 to `PC`? What does the machine do if it does?
+8. Why must `CMP` exist, when `SUB` already sets the flags?
 
 ---
 
@@ -158,4 +208,5 @@ A program that sets `A = 3` and counts down to 0, `OUT` each value. Trace in the
 **Read**
 
 - learncpp.com — [If statements](https://www.learncpp.com/cpp-tutorial/if-statements-and-blocks/), [switch](https://www.learncpp.com/cpp-tutorial/switch-statement-basics/), [while](https://www.learncpp.com/cpp-tutorial/while-statement/), [for](https://www.learncpp.com/cpp-tutorial/for-statements/), [logical operators](https://www.learncpp.com/cpp-tutorial/logical-operators/).
-- Nystrom — [Jumping around](https://gameprogrammingpatterns.com/) is the wrong book; stay on learncpp. For *why* `switch` is your decoder, reread your own `cpu.cpp`.
+- Wikipedia — [Branch (computer science)](https://en.wikipedia.org/wiki/Branch_(computer_science)) and [Program counter](https://en.wikipedia.org/wiki/Program_counter). Two short pages; they name what you just built.
+- For *why* a `switch` is the right decoder, reread your own `cpu.cpp`. That is the most useful text on this page.

@@ -10,7 +10,9 @@
 
 One byte is a cell. **Many bytes of the same type, packed next to each other,** are an array. The CPU already had this — `ember`'s memory *is* `Byte data[4096]`. This week you start *using* that fact as a programmer: index, nest two indices into a grid, stop at `'\0'`, swap two cells until a slice is sorted.
 
-What makes the array visible is the **display**. 64×32 pixels is a `bool` (or a bit — Lab 2) per cell. `pixel(x, y)` is `pixels[y * 64 + x]`. `PLOT` sets a bit. `cls` plus a loop draws a rectangle. A bouncing pixel is a nested-loop-free animation you `run`. Suddenly 2D indexing is a game, and a row of memory you sort is a bar chart if you plot `mem[i]` as a column height.
+What makes the array visible is the **display** — and the display is not a separate array. It is **256 bytes of `ember` memory**, at `0xA00`, one bit per pixel ([ISA.md §7](ISA.md#7-the-display-is-memory)). `SHOW` draws them. `PLOT` sets one. But so does `STORE [H], A`, and that is the point of the lab: your screen is a region of the same box you have been dumping since week 2.
+
+Run `dump` after drawing something and read the hex at `0xA00`. Those are your pixels. Two dimensions, a row stride of 8 bytes, one bit per cell — the formula is the whole of "2D", and nothing about it is a metaphor.
 
 Strings are arrays of `char` that agree to end at `0`. You already poked `"AB"` in Lab 1. Now `OUTS addr` prints until `'\0'` or a max length — and you will not walk off the box doing it.
 
@@ -37,13 +39,27 @@ There is no 2D memory. A matrix `m[row][col]` is a formula:
 index = row * NCOLS + col
 ```
 
-For the display: `index = y * WIDTH + x`. Row-major (C/C++) means **cells of a row sit together**. Nested loops: outer `y`, inner `x` walks memory sequentially — faster, and matches how you dump a framebuffer.
+Row-major (C/C++) means **cells of a row sit together**. Nested loops: outer `row`, inner `col` walks memory sequentially — faster, and it matches how you dump a framebuffer.
 
-If you want more practice with that formula, implement `min_row(y)` over the display or over a region of `ember` memory.
+`ember`'s display adds one twist: a pixel is a **bit**, not a byte, so the row stride is measured in bytes and the column splits into byte-and-bit:
+
+```txt
+byte address = 0xA00 + y * 8 + (x / 8)      ; 64 pixels / 8 bits = 8 bytes per row
+bit number   = 7 - (x % 8)                  ; bit 7 is the LEFTMOST pixel
+lit          = (mem[byte address] >> bit number) & 1
+```
+
+`y * 8` is the stride. `x / 8` is which byte in the row. `x % 8` is which bit in
+that byte — and `7 -` is there because we write bits left to right but number
+them right to left. Get that backwards and your picture comes out mirrored in
+groups of eight, which is a wonderfully diagnosable bug.
+
+Setting and clearing that bit is Lab 2's triple, arriving with a job:
+`mem[a] |= (1u << n)` and `mem[a] &= ~(1u << n)`.
 
 ### 3. Strings: length by convention
 
-A **C-string** is `char s[] = "hi";` which is `{ 'h', 'i', '\0' }`. `strlen` walks until 0. If the 0 is missing, it walks into the void (ASan). In `ember`, guest strings are the same bytes. `OUTS` must have a **cap** (`max` bytes or until `MEM_SIZE`) as well as `'\0'`.
+A **C-string** is `char s[] = "hi";` which is `{ 'h', 'i', '\0' }`. `strlen` walks until 0. If the 0 is missing, it walks into the void (ASan). In `ember`, guest strings are the same bytes, living in the data region at `0x800`. `OUTS` must have a **cap** (256 bytes, per [ISA.md](ISA.md)) as well as `'\0'` — because the guest program that forgot its terminator is *your* problem to survive, not a reason to read 4 KB of screen memory into the terminal.
 
 `char` is a number. `'0' + 3` is `'3'` — handy for printing a one-digit index without a full formatter.
 
@@ -61,7 +77,7 @@ Linear search you have (Lab 4). Run it on the framebuffer: "find the first lit p
 2. Fill `int m[2][3]`, print `m[1][2]` and the equivalent `*(&m[0][0] + 1*3 + 2)`.
 3. `char s[] = "AB"; s[2] = 'X';` then `std::cout << s;` with ASan — what happens?
 4. Bubble-sort `{4, 1, 3, 2}` on paper for one pass, then run it.
-5. Draw a 4×2 "display" in a `char pixels[8]` and write `plot(x,y)` as one line.
+5. On paper: a 16×2 display packed into `Byte pixels[4]`. Which byte and which bit is `(9, 1)`? Check with the formula, then with the real `0xA00 + y*8 + x/8` on a 64×32 screen.
 
 ---
 
@@ -69,41 +85,79 @@ Linear search you have (Lab 4). Run it on the framebuffer: "find the first lit p
 
 ### Display contract
 
-- **64×32** pixels (change if you must, document).
-- Storage: `Byte pixels[WIDTH * HEIGHT / 8]` **bit-packed** (Lab 2 masks) *or* `Byte pixels[WIDTH * HEIGHT]` with 0/1 — bit-packed is the flex; 0/1 is acceptable if you explain the memory cost in the README.
-- `show` — print the screen in the terminal (`#`/`█` vs space).
-- Opcodes: `CLS` (clear), `PLOT` (set pixel from `A`=`x`, `B`=`y`, or from immediates — document).
+Fixed, from [ISA.md §7](ISA.md#7-the-display-is-memory) — do not invent your own:
+
+- **64×32** pixels, **1 bit per pixel**, **256 bytes**, at `VRAM_LO = 0xA00`.
+- It lives **inside `Memory`**, not in a separate host array. There is no `Byte pixels[]`. There is `mem.data[0xA00 .. 0xAFF]`.
+- `show` — print the screen in the terminal (`#` or `█` for a lit pixel, space otherwise).
+- Opcodes `0x40`–`0x43`: `CLS`, `PLOT` (`x = A`, `y = B`; off-screen sets `C` and changes nothing), `SHOW`.
+
+A byte per pixel would cost 2048 bytes — half the machine — for a screen that
+only needs 256. That is not a style preference; that is why Lab 2 existed.
 
 ### Milestones
 
 **M1 — The framebuffer.**
-`plot(x,y)`, `clear()`, `show()`. Out-of-range coordinates rejected. Draw a border (four loops or one clever loop) from C++ so `show` has something to photograph.
+Host functions `plot(Memory&, x, y)`, `clear(Memory&)`, `show(const Memory&)` that read and write `mem.data[0xA00 ...]` through the formula in theory §2. Out-of-range coordinates rejected. Draw a border from C++ so `show` has something to photograph.
 
-**M2 — `PLOT` / `CLS` as instructions.**
-A poked program that plots three pixels and `HALT`s. `run` then `show`.
+**M2 — `CLS` / `PLOT` / `SHOW` as instructions.**
+A poked program that plots three pixels and `HALT`s. `run`, then `show`.
 
-**M3 — Strings.**
-`OUTS <addr>` (command and/or opcode) prints a guest C-string with a cap. Poke `HELLO\0` at `0x0200` and print it. Do **not** use `std::string` for the guest; you may use it for the host CLI.
+**M3 — Prove the screen is memory.**
+Two things, and they matter more than M2:
 
-**M4 — Search and sort on a region.**
-- `find` already exists; point it at a data region and at "first non-zero pixel" if you expose the buffer.
+1. Run the second program in [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against): `CLS`, `LOADI A, 0x80`, `LOADH H, 0x0A00`, `STORE [H], A`, `SHOW`. One pixel in the top-left corner, drawn with **no `PLOT` at all**.
+2. Draw the border from M1, then `dump` and paste the lines from `0xA00`. Point at one byte and say which eight pixels it is.
+
+If the pixel lands anywhere but the corner, exactly one of three things is wrong: the memory map, your bit order, or `show`. Now you know which three to check.
+
+**M4 — Strings.**
+`OUTS` (`0x04`) prints a guest C-string with a cap. Poke `HELLO\0` at `0x800` and print it. Do **not** use `std::string` for the guest; you may use it for the host CLI.
+
+**M5 — Search and sort on a region.**
+- `find` already exists (Lab 4); point it at the data region, and at VRAM to find the first non-zero byte of the picture.
 - `sort <lo> <hi>` bubble or insertion, in-place on guest memory.
-- Put 8 bytes, dump, sort, dump again, paste both dumps. Optional: after each pass, plot `mem[lo+i]` as a bar and `show` — a visible sort in the terminal.
+- Put 8 bytes at `0x800`, dump, sort, dump again, paste both dumps. Optional: after each pass, draw `mem[lo+i]` as a bar and `show` — a visible sort in the terminal.
 
 ### Definition of done
 
-- 64×32 display, `show`, `PLOT`/`CLS`.
+- 64×32 1-bit display **inside guest memory** at `0xA00`; `show`, `CLS`, `PLOT`, `SHOW`.
+- One pixel lit with `STORE [H], A` and no `PLOT`, plus a dump of VRAM with one byte explained.
 - Guest C-string print with a cap; a `HELLO` demo.
 - In-place sort of a memory region, before/after dumps.
-- 2D index formula in the README in one line.
+- The byte/bit address formula in the README, in one block.
 - Repo tagged `lab-05`.
+
+---
+
+## Levels
+
+### Basic — "there is a screen" (~10–12 hours)
+- VRAM lives **in `ember` memory** at `0xA00`, 256 bytes, one bit per pixel, exactly as [ISA.md §7](ISA.md#7-the-display-is-memory) describes.
+- `CLS`, `PLOT`, `SHOW` work; off-screen coordinates set `C` and change nothing.
+- A border drawn from C++ so `SHOW` has something to photograph.
+- A poked program that plots three pixels and halts.
+- Repo tagged `lab-05`.
+
+### Standard — target (~15–17 hours)
+- Everything in **Definition of done** above.
+- The proof that the screen is memory: light the top-left pixel with `STORE [H], A` and no `PLOT` at all ([ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against)), then `dump 0xA00` and point at the byte you wrote.
+- `OUTS` with both a `'\0'` check **and** a cap; `HELLO` printed from `0x800`.
+- `sort <lo> <hi>` in place on guest memory, with before/after dumps pasted.
+- The 2D index formula in the README, in one line.
+
+### Advanced — distinction (~20–22 hours)
+- Everything above, plus the sort visualised as bars on the display, one `SHOW` per pass.
+- A bouncing pixel animated from a host loop.
+- Optional: `rowmin <y>` — the leftmost lit pixel in a row.
 
 ---
 
 ## Deliverable checklist
 
-- [ ] Framebuffer + `show`; bounds-checked `plot`.
-- [ ] `PLOT`/`CLS` opcodes; three-pixel program.
+- [ ] VRAM at `0xA00` inside `Memory`; `show`; bounds-checked `plot`.
+- [ ] `CLS`/`PLOT`/`SHOW` opcodes; three-pixel program.
+- [ ] A pixel drawn with `STORE [H], A`; VRAM dump in the README.
 - [ ] `OUTS` with `'\0'` and a cap.
 - [ ] `sort` on guest memory; evidence in the README.
 - [ ] Git tag `lab-05`.
@@ -113,10 +167,12 @@ A poked program that plots three pixels and `HALT`s. `run` then `show`.
 ## Reflection — explain it at the whiteboard
 
 1. Write `buf[i]` as pointer arithmetic. Why is `sizeof(buf)` not `sizeof(ptr)`?
-2. Why is `index = y * WIDTH + x`, not `x * HEIGHT + y`? What breaks if you swap them?
-3. Why must `OUTS` have a cap as well as `'\0'`?
-4. Bubble vs insertion: which swaps more on an already-sorted array? Why does that matter on 8 bytes vs 8 million?
-5. How many bytes is a 64×32 1-bit display? 8-bit gray? Why did Lab 2 belong in this lab?
+2. Why is `index = y * 8 + x / 8`, not `x * 32 + y`? What breaks if you swap them?
+3. Why `7 - (x % 8)` and not `x % 8`? Draw the byte `0x80` as eight pixels.
+4. Why must `OUTS` have a cap as well as `'\0'`?
+5. Bubble vs insertion: which swaps more on an already-sorted array? Why does that matter on 8 bytes vs 8 million?
+6. How many bytes is a 64×32 1-bit display? 8-bit gray? Why did Lab 2 belong in this lab?
+7. A guest program can `STORE` into VRAM. It can also `STORE` into its own code. What stops it? What stops a real program on your laptop?
 
 ---
 
@@ -130,11 +186,10 @@ Bit-pack the framebuffer if you didn't. Animate a bouncing pixel (`run` in a hos
 
 **Watch**
 
-- [Inversion of a sprite (bitwise), any CHIP-8 intro](https://www.youtube.com/watch?v=I5e_cUoCYzo) — pixels as bits; 10 minutes of "why masks."
-- Ben Eater — [VGA](https://www.youtube.com/watch?v=l7rce6IQDWs) if you want to see a *real* framebuffer timed by a clock.
+- Ben Eater — [A simple video card](https://www.youtube.com/watch?v=l7rce6IQDWs) — a *real* framebuffer, read out of RAM by a clock, one pixel at a time. Watch the first fifteen minutes: it is your `show()` in hardware.
 
 **Read**
 
 - learncpp.com — [Arrays](https://www.learncpp.com/cpp-tutorial/introduction-to-arrays/), [C-style strings](https://www.learncpp.com/cpp-tutorial/c-style-strings/).
 - Wikipedia — [Row- and column-major](https://en.wikipedia.org/wiki/Row-_and_column-major_order), [Bubble sort](https://en.wikipedia.org/wiki/Bubble_sort) (the GIF).
-- CHIP-8 display is 64×32. You are in good company.
+- [CHIP-8 technical reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) — §2.4 *Display*. A real 1970s virtual machine with a 64×32 monochrome screen, described in one page. Ours is deliberately in that family.

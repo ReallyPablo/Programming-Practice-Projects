@@ -4,7 +4,7 @@
 
 > "The computer is a machine that moves bits. Types, names, and languages are stories we tell about those bits so we can think."
 
-A 16-week, 8-lab course for **first-year** students. You do not need to have programmed before. Across the semester you build **one machine**: a tiny virtual computer. By Lab 8 you write programs *for* it in a language *you* scanned and assembled. A recruiter can clone the repo, run one command, and see the dump, the pixels, and a Fibonacci that lives on a stack you implemented.
+A 16-week, 8-lab course for **first-year** students. You do not need to have programmed before — [week 0](setup.notes.md) installs the tools, [C++ за годину](cpp-survival-kit.notes.md) gives you the language you need for Lab 1, and Lab 1 itself starts from a [working skeleton](starter/README.md), not an empty file. Across the semester you build **one machine**: a tiny virtual computer. By Lab 8 you write programs *for* it in a language *you* scanned and assembled. A recruiter can clone the repo, run one command, and see the dump, the pixels, and a Fibonacci that lives on a stack you implemented.
 
 The working name of that machine is **`ember`**. It is not a library and not a programming language — it is the program *you* write, named so every lab can point at the same thing. Call your repo whatever you like. Everyone builds the same machine: memory, registers, a display, an assembler. What differs is the README, extra opcodes if you want them, and the programs you write for it.
 
@@ -52,6 +52,19 @@ C++ is the glass: a small subset (types, functions, structs, pointers) so you ca
 
 You run it like any other command-line program: `./build/ember`. It prints a prompt. You type `dump`, `get 0`, `step`. Later: `./build/ember programs/fib.asm`.
 
+### The 4 KB, once
+
+Every lab points at the same picture. It is written down once, in **[ISA.md](ISA.md)** — the memory map and the instruction set, frozen in Lab 2 and grown a few rows at a time.
+
+```txt
+0x000  CODE  2048 B   your program; PC starts here
+0x800  DATA   512 B   strings, arrays, counters
+0xA00  VRAM   256 B   64 x 32 pixels, 1 bit each -- the screen IS memory
+0xB00  spare  256 B
+0xC00  HEAP   768 B   ALLOC bumps upward
+0xF00  STACK  256 B   SP starts at 0xFFF and walks down
+```
+
 ```mermaid
 flowchart LR
     L1[Lab 1<br/>Types & compilation<br/><i>a box of bytes, a dump</i>] --> L2[Lab 2<br/>Bits & number systems<br/><i>flags, ALU, opcodes</i>]
@@ -59,8 +72,8 @@ flowchart LR
     L3 --> L4[Lab 4<br/>Control flow & scope<br/><i>jumps, loops, search</i>]
     L4 --> L5[Lab 5<br/>Arrays & strings<br/><i>display, sort, text</i>]
     L5 --> L6[Lab 6<br/>Structs, enums, heap<br/><i>CPU as data, sprites</i>]
-    L6 --> L7[Lab 7<br/>Functions & the stack<br/><i>CALL/RET, recursion</i>]
-    L7 --> L8[Lab 8<br/>A language<br/><i>lexer, assembler, programs</i>]
+    L6 --> L7[Lab 7<br/>Functions & the stack<br/><i>SP, CALL/RET, recursive fact</i>]
+    L7 --> L8[Lab 8<br/>A language<br/><i>lexer, assembler, fib.asm</i>]
 ```
 
 Everyone builds the same machine. What differs is the README, extra opcodes if you want them, and the programs you write for it.
@@ -91,6 +104,25 @@ Read this once. The labs assume these meanings.
 | **UBSan** | **UndefinedBehaviorSanitizer** (`-fsanitize=undefined`). Catches things like signed integer overflow. |
 | **UB** | Undefined behaviour: the language does not promise what happens. Sanitizers make some of it visible. |
 | **CMake** | The build tool: you describe the project once, then `cmake --build` compiles it the same way on every OS. |
+| **`H`** | The address register: 16 bits, holds *where* rather than *what*. A pointer the CPU can hold. |
+| **`SP`** | Stack pointer. `PUSH` writes below it, `POP` reads back. |
+| **VRAM** | The 256 bytes of `ember` memory the display is made of. Not a separate array — [ISA.md §7](ISA.md#7-the-display-is-memory). |
+
+---
+
+## Before Lab 1
+
+Three pages, one evening, once per semester. Everything after this assumes them.
+
+| Page | What it gives you |
+|---|---|
+| [Інструменти, термінал і git](setup.notes.md) | compiler, CMake and git installed per OS; the ten terminal commands; the git you actually need for tags and a public repo |
+| [C++ за годину](cpp-survival-kit.notes.md) | `cout`, variables, `if`, loops, functions, arrays, strings — exactly enough to read Lab 1's skeleton and write your four `TODO`s |
+| [Помилки, які ви точно побачите](errors.notes.md) | real compiler, linker and sanitizer messages, decoded. Keep it open all semester |
+
+Then copy the [starter skeleton](starter/README.md) and open [Lab 1](lab-01-a-box-of-bytes.md).
+
+The machine's reference — memory map, instruction set, calling convention — lives in **[ISA.md](ISA.md)** and is the contract every lab builds against.
 
 ---
 
@@ -104,8 +136,8 @@ Read this once. The labs assume these meanings.
 | 4 | [The Shape of Control](lab-04-the-shape-of-control.md) | [notes](lab-04-the-shape-of-control.notes.md) | Booleans, `if`/`switch`/`while`/`for`, short-circuit, block scope | `JMP`/`JZ`, a loop in bytecode, linear search |
 | 5 | [Many of One Thing](lab-05-many-of-one-thing.md) | [notes](lab-05-many-of-one-thing.notes.md) | Arrays, 2D indexing, strings, search, simple sorts | A 64×32 display, `PLOT`, sort a region, print a string |
 | 6 | [Named Bundles](lab-06-named-bundles.md) | [notes](lab-06-named-bundles.notes.md) | `struct`, `enum`, lifetime, stack vs heap, leaks | `CPU`/`Instruction` as structs, a heap region, sprites |
-| 7 | [Call and Return](lab-07-call-and-return.md) | [notes](lab-07-call-and-return.notes.md) | Functions, value vs pointer, the call stack, recursion, headers | `Stack` ADT, `CALL`/`RET`, recursive Fibonacci in bytecode |
-| 8 | [Give It a Language](lab-08-give-it-a-language.md) | [notes](lab-08-give-it-a-language.notes.md) | Tokens, scanners, linked lists, ADTs, syntax errors | A lexer + assembler; `hello`, `search`, `fib`, `bounce` as `.asm` |
+| 7 | [Call and Return](lab-07-call-and-return.md) | [notes](lab-07-call-and-return.notes.md) | Functions, value vs pointer, the call stack, recursion, headers | `SP`, `PUSH`/`POP`, `Stack` ADT, `CALL`/`RET`, recursive factorial |
+| 8 | [Give It a Language](lab-08-give-it-a-language.md) | [notes](lab-08-give-it-a-language.notes.md) | Tokens, scanners, linked lists, ADTs, syntax errors | A lexer + assembler; `hello`, `search`, `fib` as `.asm` |
 
 Each lab is **two weeks**. Week 16 is the showcase.
 
@@ -128,16 +160,20 @@ Same shape as the Python and JavaScript courses:
 2. **Notes** — a short companion: theory, paste-ready snippets, expected output. Use it in class or alone; it does not replace the lab.
 3. **Theory** — the mental model, what's under the hood, pitfalls, *prove-it-to-yourself* experiments. This is the reading.
 4. **Project step** — what to add to `ember`, with milestones and a definition of done.
-5. **Deliverable checklist**
-6. **Reflection** — explain it at the whiteboard.
-7. **Stretch** — optional, when you're ahead.
-8. **Resources** — a few talks and chapters, each with one line on *why this one*.
+5. **Levels** — Basic / Standard / Advanced, with honest hour estimates. Pick a landing spot before you start; Basic is a real, passing lab.
+6. **Deliverable checklist**
+7. **Reflection** — explain it at the whiteboard.
+8. **Stretch** — optional, when you're ahead.
+9. **Resources** — a few talks and chapters, each with one line on *why this one*.
+
+The three Levels map onto the program-wide rubric in [`INSTRUCTOR_HANDBOOK.md`](../../INSTRUCTOR_HANDBOOK.md) §6: Basic passes, Standard is the target, Advanced is distinction.
 
 ---
 
 ## Rules of the course
 
 - **Solo.** You'll hold the whole machine in your head by the end, which is the point.
+- **One machine.** The memory map and instruction set in [ISA.md](ISA.md) are the same for everyone. Extend them in the reserved range; never redefine what is already there.
 - **One repository, from day one.** Public GitHub. Commit as you go. Tag each lab (`lab-01`, `lab-02`, …).
 - **README is part of every deliverable.** Each lab adds a section: what you built, pasted terminal output, what surprised you. By Lab 8 that README is the story of a computer.
 - **Terminal only.** Compile, run, and check from a shell. Notes snippets → `c++ … scratch.cpp`. `ember` → a prompt you type into. Evidence is **pasted stdout** (and sanitizer reports).
@@ -186,6 +222,7 @@ Everything essential is free.
 - **[Crafting Interpreters](https://craftinginterpreters.com/)** — scanning and tokens (Lab 8). You are not building Lox; you are stealing the attitude.
 - **[CS:APP](https://csapp.cs.cmu.edu/)** — bits, memory, and machine code when you want more depth on Labs 2–3.
 - **[Crash Course Computer Science](https://www.youtube.com/playlist?list=PL8dPuuaLjXtNlUrzyH5r6jN9ulIgZBpdo)** — binary, registers, machine code in about ten minutes.
+- **[CHIP-8 technical reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)** — a whole 1970s virtual machine specified in a few pages. Read it once and `ISA.md` stops feeling arbitrary.
 
 ---
 
@@ -194,7 +231,8 @@ Everything essential is free.
 - *"I built a virtual computer with 4 KB of memory. Here's a dump; here's the program counter; here's a pixel I plotted."*
 - *"Instructions are bytes. I decode them with masks and implement ADD as bits — and I also used C++ `+` so I could check myself."*
 - *"Functions are not magic: `CALL` pushes a return address, `RET` pops it. I can show you Fibonacci overflowing the stack."*
-- *"I wrote a lexer that turns `ADD A, B` into tokens and an assembler that turns tokens into the bytes the CPU already understood."*
+- *"I wrote a lexer that turns `ADD A, B` into tokens and an assembler that turns tokens into the bytes the CPU already understood. That is why Fibonacci was twenty lines instead of forty hand-computed jump targets."*
+- *"The screen is 256 bytes of the same memory I dump. Here is the byte; here are its eight pixels."*
 - *"I can explain two's complement, why `0.1 + 0.2` is not `0.3`, what a pointer is, and what AddressSanitizer printed when I walked off the array."*
 
-Start with [Lab 1](lab-01-a-box-of-bytes.md).
+Start with [week 0](setup.notes.md), then [Lab 1](lab-01-a-box-of-bytes.md).
