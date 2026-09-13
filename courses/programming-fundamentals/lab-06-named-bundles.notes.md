@@ -2,7 +2,7 @@
 
 Поруч із лабою: [lab-06-named-bundles.md](lab-06-named-bundles.md).
 
-Лаба — **що здати** (CPU як struct, спрайти, bump-heap, три репорти sanitizer). Цей файл — розкладка в пам’яті і життя об’єкта.
+Лаба — **що здати** (CPU як struct, спрайти, bump-heap, три репорти sanitizer). Фрагмент → `scratch.cpp`, збірка як у [Notes 01](lab-01-a-box-of-bytes.notes.md). Репорт ASan/LSan — це stdout/stderr термінала.
 
 | | Зроби зараз | Зупинись, коли |
 |---|---|---|
@@ -59,16 +59,17 @@ int main() {
 ### Спробуй
 
 ```cpp
+#include <iostream>
 enum class Op : unsigned char { Halt = 0, Add = 0x10 };
 int main() {
     Op o = Op::Add;
-    // o = 1;            // не має зібратись
+    // o = 1;            // розкоментуй: c++ … має впасти на компіляції
     o = static_cast<Op>(0x10);
-    return static_cast<int>(o);
+    std::cout << static_cast<int>(o) << '\n';
 }
 ```
 
-**Очікуй:** закоментований рядок — помилка компіляції. Опкоди з Lab 2 переїжджають сюди; `switch` на `Op`.
+**Очікуй:** `16`. З розкоментованим `o = 1` — помилка компілятора в терміналі, не рантайм. Опкоди з Lab 2 переїжджають сюди; `switch` на `Op`.
 
 ---
 
@@ -100,6 +101,11 @@ int main() {
 }
 ```
 
+```bash
+c++ -std=c++17 -fsanitize=address scratch.cpp -o scratch
+ASAN_OPTIONS=detect_leaks=1 ./scratch
+```
+
 `ASAN_OPTIONS=detect_leaks=1` (Linux/clang; на Apple буває інакше — тоді достатньо свідомого `new`/`delete` у write-up). **Очікуй:** leak report. Об’єкт є, імені немає.
 
 ---
@@ -107,15 +113,19 @@ int main() {
 ## 5. Масив записів
 
 ```cpp
+#include <iostream>
 struct Sprite { int x, y, vx, vy; bool alive; };
-Sprite s[2] = {{0,0,1,0,true},{10,5,-1,0,true}};
-for (int i = 0; i < 2; ++i) {
-    if (!s[i].alive) continue;
-    s[i].x += s[i].vx;
+int main() {
+    Sprite s[2] = {{0,0,1,0,true},{10,5,-1,0,true}};
+    for (int i = 0; i < 2; ++i) {
+        if (!s[i].alive) continue;
+        s[i].x += s[i].vx;
+        std::cout << i << ' ' << s[i].x << '\n';
+    }
 }
 ```
 
-Це «група студентів» з практичної, плюс швидкість. У ember після руху — `plot` і `show`. Відскок від краю: якщо `x==0` або `x==63`, `vx = -vx`.
+**Очікуй:** `0 1` і `1 9`. Це «група студентів» з практичної, плюс швидкість. У ember після руху — `plot` і `show` у тому ж терміналі. Відскок від краю: якщо `x==0` або `x==63`, `vx = -vx`.
 
 ---
 

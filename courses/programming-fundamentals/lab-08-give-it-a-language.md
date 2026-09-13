@@ -2,7 +2,7 @@
 
 > "A scanner is a program that looks at a string and says what it is — or that it isn't anything."
 
-**Weeks:** 15–16 · **Language focus:** tokens, scanning, linked lists, ADTs, syntax errors, the path from text to bytes · **Project step:** a lexer + assembler; `hello`, `search`, `fib`, `bounce` as `.asm` · **Course:** [Programming Fundamentals](README.md) · **Previous:** [Lab 07](lab-07-call-and-return.md) · **Notes:** [theory + experiments](lab-08-give-it-a-language.notes.md)
+**Weeks:** 15–16 · **Language focus:** tokens, scanning, linked lists, ADTs, syntax errors, the path from text to bytes · **Project step:** a lexer + assembler; `hello`, `search`, `fib`, `bounce` as `.asm` · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 07](lab-07-call-and-return.md) · **Notes:** [theory + experiments](lab-08-give-it-a-language.notes.md)
 
 This lab **is** the old "RGR." The skill was always: recognize strings of a language, or report an error. The language is no longer `$` + hex + `:`. It is **yours**.
 
@@ -128,7 +128,7 @@ programs/
 ### Milestones
 
 **M1 — Lexer.**
-Feed a string, get a list of tokens. Reject illegal characters and bad numbers with `line`. Command `lex programs/hello.asm` prints tokens one per line. Screenshot.
+Feed a string, get a list of tokens. Reject illegal characters and bad numbers with `line`. Command `lex programs/hello.asm` prints tokens one per line. Paste that output.
 
 **M2 — Assembler.**
 Labels, mnemonics from your opcode table, numbers in dec/hex/bin. `asm programs/hello.asm` dumps the bytes (or loads them at `0x0000`). Round-trip: assembled `HALT` is `0x00` (or whatever you chose).
@@ -137,7 +137,7 @@ Labels, mnemonics from your opcode table, numbers in dec/hex/bin. `asm programs/
 All four `.asm` files run. `fib` prints the right number. `bounce` shows at least a few frames (`show` in a host loop, or `PLOT` then `show` once — document). `search` finds a poked/included byte.
 
 **M4 — README as the product.**
-Architecture diagram (source → tokens → bytes → CPU). Opcode table. Calling convention. How to build and run in three commands. A GIF or screenshot of `bounce` or the dump+output of `fib`. Known limits (no macros, no expressions, one instruction per line). Tag `v1.0.0` as well as `lab-08`.
+Architecture diagram (source → tokens → bytes → CPU). Opcode table. Calling convention. How to build and run in three commands. Paste `./build/ember programs/fib.asm` output and a few frames of `show` from `bounce` (a GIF of the terminal is fine, not required). Known limits (no macros, no expressions, one instruction per line). Tag `v1.0.0` as well as `lab-08`.
 
 ### Definition of done
 
@@ -155,7 +155,7 @@ Architecture diagram (source → tokens → bytes → CPU). Opcode table. Callin
 - [ ] Two-pass assembler; labels work.
 - [ ] Four `.asm` demos; `ember file.asm` runs.
 - [ ] List nodes `delete`d; ASan/LSan clean on the happy path.
-- [ ] README: diagram, opcodes, build, screenshots.
+- [ ] README: diagram, opcodes, build, pasted terminal output.
 - [ ] Git tags `lab-08` and `v1.0.0`.
 
 ---

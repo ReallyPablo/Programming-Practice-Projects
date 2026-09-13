@@ -2,7 +2,7 @@
 
 > "Structured programming is a small set of shapes. Everything else is those shapes nested."
 
-**Weeks:** 7–8 · **Language focus:** booleans and comparisons, `if`/`else`, `switch`, `while`/`do`/`for`, short-circuit, block scope and lifetime · **Project step:** `JMP`/`JZ`/`JNZ`, a loop in bytecode, linear search through memory · **Course:** [Programming Fundamentals](README.md) · **Previous:** [Lab 03](lab-03-addresses-not-names.md) · **Notes:** [theory + experiments](lab-04-the-shape-of-control.notes.md)
+**Weeks:** 7–8 · **Language focus:** booleans and comparisons, `if`/`else`, `switch`, `while`/`do`/`for`, short-circuit, block scope and lifetime · **Project step:** `JMP`/`JZ`/`JNZ`, a loop in bytecode, linear search through memory · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 03](lab-03-addresses-not-names.md) · **Notes:** [theory + experiments](lab-04-the-shape-of-control.notes.md)
 
 ---
 
@@ -23,7 +23,7 @@ done:  HALT
 
 You will implement `JMP` (always) and `JZ`/`JNZ` (if Z is set / not set — Lab 2's flags finally do work). Then you will write a **linear search**: given a byte `P` and a region of memory, find the first index where `mem[i] == P`, or report miss. That is the classic "practical" on sequences, except the sequence is *your machine's RAM* and the loop is one you both wrote in C++ (`step` is a loop) and encoded as guest instructions.
 
-Scope is the other half. A name lives in a `{ }` block. The same identifier in an inner block **shadows** the outer one ("membrane effect" in older notes). `static` local variables survive across calls; ordinary locals die when the block ends. You will watch both in a debugger, then stop using `static` as a party trick.
+Scope is the other half. A name lives in a `{ }` block. The same identifier in an inner block **shadows** the outer one ("membrane effect" in older notes). `static` local variables survive across calls; ordinary locals die when the block ends. Print both with `std::cout` in the notes snippet; then stop using `static` as a party trick.
 
 ---
 

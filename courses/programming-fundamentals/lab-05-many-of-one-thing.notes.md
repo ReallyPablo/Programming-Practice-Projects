@@ -2,7 +2,7 @@
 
 Поруч із лабою: [lab-05-many-of-one-thing.md](lab-05-many-of-one-thing.md).
 
-Лаба — **що здати** (64×32, `PLOT`, `OUTS`, `sort`, тег). Цей файл — індекс як формула.
+Лаба — **що здати** (64×32, `PLOT`, `OUTS`, `sort`, тег). Фрагмент → `scratch.cpp`, збірка як у [Notes 01](lab-01-a-box-of-bytes.notes.md). Екран — команда `show` у `./build/ember` (ASCII в терміналі).
 
 | | Зроби зараз | Зупинись, коли |
 |---|---|---|

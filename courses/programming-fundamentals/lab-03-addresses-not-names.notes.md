@@ -2,7 +2,7 @@
 
 Поруч із лабою: [lab-03-addresses-not-names.md](lab-03-addresses-not-names.md).
 
-Лаба — **що здати** (`LOAD`/`STORE`, little-endian, ASan, тег). Цей файл — стрілки на папері й досліди.
+Лаба — **що здати** (`LOAD`/`STORE`, little-endian, ASan, тег). Фрагмент → `scratch.cpp`, збірка як у [Notes 01](lab-01-a-box-of-bytes.notes.md). ASan сам надрукує репорт у термінал.
 
 | | Зроби зараз | Зупинись, коли |
 |---|---|---|

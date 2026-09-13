@@ -2,7 +2,7 @@
 
 > "A struct is a layout. An enum is a list of meanings. The heap is memory whose lifetime you chose — and must un-choose."
 
-**Weeks:** 11–12 · **Language focus:** `struct`, `enum class`, layout and `sizeof`, stack vs heap, `new`/`delete`, leaks and double-free · **Project step:** `CPU`/`Instruction` as structs, a heap region, sprites as records · **Course:** [Programming Fundamentals](README.md) · **Previous:** [Lab 05](lab-05-many-of-one-thing.md) · **Notes:** [theory + experiments](lab-06-named-bundles.notes.md)
+**Weeks:** 11–12 · **Language focus:** `struct`, `enum class`, layout and `sizeof`, stack vs heap, `new`/`delete`, leaks and double-free · **Project step:** `CPU`/`Instruction` as structs, a heap region, sprites as records · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 05](lab-05-many-of-one-thing.md) · **Notes:** [theory + experiments](lab-06-named-bundles.notes.md)
 
 ---
 
@@ -92,7 +92,7 @@ Rules: every `new` has one `delete`; every `new[]` has `delete[]`. After `delete
 Reserve e.g. `[0x0C00, 0x0FFF)` as heap. `CPU` (or `Memory`) holds `uint16_t heap_ptr` starting at `0x0C00`. Opcode or command `alloc <n>`: if `heap_ptr + n <= HEAP_HI`, return the old pointer and advance; else error. `dump` of that region after two allocs. No `free` required (bump allocators usually don't); mention that in the README.
 
 **M4 — Host new/delete, on purpose.**
-A *temporary* command or a 10-line scratch linked in Debug only that `new`s a `Sprite` and forgets it; paste LSan/ASan output. Then a version that `delete`s. Then a version that `delete`s twice. README: three reports, three one-line morals. Remove the broken command before the tag if you want a clean `run`; keep the write-up.
+A *temporary* `scratch.cpp` (same `c++` line as the notes) that `new`s a `Sprite` and forgets it; paste the sanitizer output from the terminal. Then a version that `delete`s. Then a version that `delete`s twice. README: three reports, three one-line morals. Delete `scratch.cpp` before the tag if you want a clean tree; keep the write-up.
 
 ### Definition of done
 
@@ -118,7 +118,7 @@ A *temporary* command or a 10-line scratch linked in Debug only that `new`s a `S
 
 1. Draw `Sprite` in memory. Where is padding, if any? How did you find out?
 2. `enum` vs `enum class` vs `#define ADD 0x10`. Why bother?
-3. Stack vs heap: who allocates, who frees, what does the debugger show for a local vs `new`?
+3. Stack vs heap: who allocates, who frees? Print `&local` and the pointer from `new` with `std::cout` — what is different?
 4. Leak vs dangling vs double-free. Which sanitizer message is which?
 5. Why is a bump allocator enough for `ember` this week? What can't it do that `delete` can?
 6. Why pass `CPU&` into `step` instead of copying `CPU` by value?

@@ -2,7 +2,7 @@
 
 Поруч із лабою: [lab-04-the-shape-of-control.md](lab-04-the-shape-of-control.md).
 
-Лаба — **що здати** (`JMP`/`JZ`, countdown, `find`, тег). Цей файл — форми керування і їхній переклад у `PC`.
+Лаба — **що здати** (`JMP`/`JZ`, countdown, `find`, тег). Фрагмент → `scratch.cpp`, збірка як у [Notes 01](lab-01-a-box-of-bytes.notes.md). Countdown і `find` — команди в `./build/ember`.
 
 | | Зроби зараз | Зупинись, коли |
 |---|---|---|
@@ -47,7 +47,15 @@ int main() {
 }
 ```
 
-Без `-Werror` **очікуй:** `yes 1` — бо `x = 1` має значення `1` (true), і `x` уже 1. З `-Werror` це часто взагалі не збереться. Пам’ятай обидва світи.
+Без `-Werror` (цей один дослід):
+
+```bash
+c++ -std=c++17 -Wall -Wextra scratch.cpp -o scratch && ./scratch
+```
+
+**Очікуй:** `yes 1` — бо `x = 1` має значення `1` (true), і `x` уже 1.
+
+З звичайними прапорцями курсу (`-Werror`) той самий файл часто **не збереться** — компілятор напише в термінал `using the result of an assignment as a condition`. Пам’ятай обидва світи.
 
 `&&` `||` `!` — логічні. `&` `|` — бітові. `1 && 2` true; `1 & 2` це 0.
 

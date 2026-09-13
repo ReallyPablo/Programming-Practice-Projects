@@ -3,7 +3,7 @@
 > "The purpose of computing is insight, not numbers."
 > — Richard Hamming
 
-**Weeks:** 1–2 · **Language focus:** what a program is, compilation, integer and floating types as *sizes*, overflow, `const`, characters as numbers, a tiny CLI · **Project step:** a 4 KB box of memory you can dump and poke · **Course:** [Programming Fundamentals — Build a Computer You Can See](README.md) · **Notes:** [theory + experiments](lab-01-a-box-of-bytes.notes.md)
+**Weeks:** 1–2 · **Language focus:** what a program is, compilation, integer and floating types as *sizes*, overflow, `const`, characters as numbers, a tiny command-line program · **Project step:** a 4 KB box of memory you can dump and poke · **Course:** [EN](README.md) · [UK](README.uk.md) · **Notes:** [theory + experiments](lab-01-a-box-of-bytes.notes.md)
 
 ---
 
@@ -13,7 +13,7 @@ A computer does not know about "integers" or "variables." It has **bytes** — g
 
 A **type** is the story: how many bytes, which operations are allowed, and how the bits are read. `int` is not "a number." It is (usually) four bytes, two's complement, with wrap-on-overflow that the language calls *undefined* if it is signed. `char` is one byte that we sometimes print as a glyph. `float` is a scientific-notation trick that cannot hold `0.1` exactly. Once you have seen a byte printed as decimal, hex, binary, *and* a character at the same time, types stop being vocabulary from a lecture and become a view of memory.
 
-This lab builds that view. You will compile a real C++ program with warnings and sanitizers on, stop it in a debugger, and grow it into `ember`: 4096 bytes with a prompt that dumps them. By the end of the course that box will be a computer. Today it is just honest.
+This lab builds that view. You compile in the **terminal** (`c++` for the notes snippets, `cmake` for the project) with warnings and **sanitizers** on — extra checks baked into the binary so a wild memory bug prints a report instead of quietly “working.” That grows into **`ember`**: the name of *your* virtual computer, a 4096-byte box with a prompt that dumps it. (Rename the project if you like; the labs keep saying `ember` so we share a noun.) By the end of the course that box is a computer. Today it is just honest.
 
 ---
 
@@ -75,7 +75,13 @@ Scope starts next lab in anger; for now: a name lives from its declaration to th
 
 ### Prove it to yourself (a 15-line program, ~15 minutes)
 
-Required — notes §§1–4, same snippets:
+Paste each snippet into `scratch.cpp`. From the same directory:
+
+```bash
+c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined scratch.cpp -o scratch && ./scratch
+```
+
+No IDE Run button. The output of `./scratch` is what you compare to the notes' **Очікуй**. Required — notes §§1–4, same snippets:
 
 1. Print `sizeof(char)`, `sizeof(int)`, `sizeof(float)`, `sizeof(double)`, `sizeof(void*)`. Write the numbers in the README. They are *your* machine's.
 2. `std::uint8_t u = 255; u = u + 1;` and `int s = 2147483647; s = s + 1;` — compile the second with sanitizers. What happens to each?
@@ -93,6 +99,9 @@ Required — notes §§1–4, same snippets:
 mkdir ember && cd ember
 git init
 # CMakeLists.txt: C++17, -Wall -Wextra -Werror, sanitizers for Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+./build/ember          # greeting + prompt; type dump, then quit
 ```
 
 Target layout at the end of this lab:
@@ -116,10 +125,10 @@ Use a `struct Memory { Byte data[MEM_SIZE]{}; };` — the `{}` **zeroes** the bo
 ### Milestones
 
 **M1 — It builds, it runs, sanitizers are on.**
-`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug` then `cmake --build build`. `./build/ember` prints a one-line greeting and a prompt. A `CMakeLists.txt` that does not pass `-fsanitize=address,undefined` on Apple/Linux Debug builds is not done. Hit a breakpoint on the greeting with lldb/gdb/your IDE; screenshot or write the command you used in the README.
+`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug` then `cmake --build build`. `./build/ember` prints a one-line greeting and a prompt. A `CMakeLists.txt` that does not pass `-fsanitize=address,undefined` on Apple/Linux Debug builds is not done. Paste the greeting + prompt into the README. (Optional: `lldb ./build/ember` in that same terminal — never required.)
 
 **M2 — The box exists and you can dump it.**
-Command `dump` prints 4096 bytes as hex, 16 bytes per line, with an ASCII gutter (printable `0x20–0x7E`, otherwise `.`). Address column in hex. After a fresh start the dump is all zeroes — *prove it* with a screenshot.
+At the ember prompt, type `dump`. It prints 4096 bytes as hex, 16 bytes per line, with an ASCII gutter (printable `0x20–0x7E`, otherwise `.`). Address column in hex. After a fresh start the dump is all zeroes — *prove it* by pasting the first three lines of terminal output into the README.
 
 **M3 — Peek and poke.**
 `set <addr> <value>` writes a byte (`value` accepted as decimal or `0x` hex). `get <addr>` prints that byte as **decimal, hex, binary, and character**. Reject addresses `>= 4096` with a message; do not crash. *Check:* `set 0 65` then `get 0` shows `65  0x41  0b01000001  'A'`.
@@ -128,7 +137,7 @@ Command `dump` prints 4096 bytes as hex, 16 bytes per line, with an ASCII gutter
 Three experiments, evidence in the README:
 
 1. `set 0 255` then mentally add one (or a tiny `inc` command). Show wrap to 0. Contrast with a *signed* `int` overflow compiled with UBSan (snippet from theory §3).
-2. Store the bytes of a `float` (or just type `0.1` in a scratch program) and explain why `== 0.3` fails — one paragraph, not a IEEE-754 essay.
+2. Run notes §3 (`scratch.cpp` + `c++ … && ./scratch`) and explain why `== 0.3` fails — one paragraph, not a IEEE-754 essay.
 3. `set 0 65` / `set 1 66` / `set 2 0` and dump — you have a C-string `"AB"` sitting in memory. Note the `0` that terminates it. Lab 5 will care.
 
 ### Definition of done
@@ -136,8 +145,7 @@ Three experiments, evidence in the README:
 - The project builds with C++17, warnings-as-errors, and sanitizers in Debug.
 - `dump` / `get` / `set` / `quit` work; out-of-range addresses are rejected.
 - `get` shows four views of the same byte.
-- The three experiments are in the README with numbers or screenshots.
-- You have stopped the program in a debugger once.
+- The three experiments are in the README with **pasted terminal output**.
 - Repo tagged `lab-01`.
 
 ---
@@ -147,7 +155,7 @@ Three experiments, evidence in the README:
 - [ ] CMake project, C++17, `-Wall -Wextra -Werror`, ASan+UBSan on Debug (Unix).
 - [ ] `Memory` of 4096 zeroed bytes; bounds-checked `get`/`set`.
 - [ ] `dump` in hex + ASCII; `get` in dec/hex/bin/char; `quit`.
-- [ ] Debugger breakpoint documented; sizeof table in the README.
+- [ ] sizeof table and `dump`/`get` output pasted from the terminal.
 - [ ] Experiments 1–3 documented.
 - [ ] Git tag `lab-01`.
 

@@ -2,7 +2,7 @@
 
 > "An array is a lie we tell about a stretch of memory: same type, adjacent, indexable in O(1)."
 
-**Weeks:** 9–10 · **Language focus:** 1D arrays, 2D as `y * width + x`, C-strings and `'\0'`, linear search (again, on purpose), bubble/insertion sort · **Project step:** a 64×32 display, `PLOT`, sort a region, print a string · **Course:** [Programming Fundamentals](README.md) · **Previous:** [Lab 04](lab-04-the-shape-of-control.md) · **Notes:** [theory + experiments](lab-05-many-of-one-thing.notes.md)
+**Weeks:** 9–10 · **Language focus:** 1D arrays, 2D as `y * width + x`, C-strings and `'\0'`, linear search (again, on purpose), bubble/insertion sort · **Project step:** a 64×32 display, `PLOT`, sort a region, print a string · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 04](lab-04-the-shape-of-control.md) · **Notes:** [theory + experiments](lab-05-many-of-one-thing.notes.md)
 
 ---
 
@@ -88,7 +88,7 @@ A poked program that plots three pixels and `HALT`s. `run` then `show`.
 **M4 — Search and sort on a region.**
 - `find` already exists; point it at a data region and at "first non-zero pixel" if you expose the buffer.
 - `sort <lo> <hi>` bubble or insertion, in-place on guest memory.
-- Put 8 bytes, dump, sort, dump again, screenshot both. Optional: after each pass, plot `mem[lo+i]` as a bar and `show` — a visible sort.
+- Put 8 bytes, dump, sort, dump again, paste both dumps. Optional: after each pass, plot `mem[lo+i]` as a bar and `show` — a visible sort in the terminal.
 
 ### Definition of done
 

@@ -2,7 +2,7 @@
 
 > "A pointer is a variable whose value is an address. Everything else is consequences."
 
-**Weeks:** 5–6 · **Language focus:** addresses, `&` and `*`, typed vs `void*`, `sizeof`, pointer arithmetic, null, the difference between a name and a location · **Project step:** `LOAD`/`STORE`, immediates, a PC that *walks* memory · **Course:** [Programming Fundamentals](README.md) · **Previous:** [Lab 02](lab-02-bits-dont-lie.md) · **Notes:** [theory + experiments](lab-03-addresses-not-names.notes.md)
+**Weeks:** 5–6 · **Language focus:** addresses, `&` and `*`, typed vs `void*`, `sizeof`, pointer arithmetic, null, the difference between a name and a location · **Project step:** `LOAD`/`STORE`, immediates, a PC that *walks* memory · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 02](lab-02-bits-dont-lie.md) · **Notes:** [theory + experiments](lab-03-addresses-not-names.notes.md)
 
 ---
 
@@ -99,7 +99,7 @@ Extend the opcode table (README). Examples:
 `step` must not run off the end of memory: if `PC` would fetch past `MEM_SIZE`, halt with an error (this is a bounds-checked pointer).
 
 **M3 — A program that uses data.**
-Poke at `0x0100` the bytes of a message (`65 66 67 0` — `ABC`). At `0x0000`, a program: load from `0x0100` into `A`, `OUT` (print `A` as char — add a one-line `OUT` that writes to stdout), halt. Run with `run` (step until `HALT`). Screenshot the output `A` (the letter) and the dump of both regions.
+Poke at `0x0100` the bytes of a message (`65 66 67 0` — `ABC`). At `0x0000`, a program: load from `0x0100` into `A`, `OUT` (print `A` as char — add a one-line `OUT` that writes to stdout), halt. Run with `run` (step until `HALT`). Paste the terminal line that prints `A` (the letter) and the `dump` of both regions.
 
 **M4 — The host pointer vs the guest address.**
 In the README: one paragraph on why `CPU` holds `Memory*` (host pointer to the whole box) and `uint16_t pc` (guest address), not a `Byte* pc` into `data`. Then: temporarily write a 3-line program that does `data[MEM_SIZE] = 1` (off-by-one). Paste the ASan report. Restore the bounds check. That report is the deliverable.

@@ -2,7 +2,7 @@
 
 Поруч із лабою: [lab-07-call-and-return.md](lab-07-call-and-return.md).
 
-Лаба — **що здати** (`Stack` ADT, `CALL`/`RET`, fib, кілька `.cpp`). Цей файл — кадр виклику.
+Лаба — **що здати** (`Stack` ADT, `CALL`/`RET`, fib, кілька `.cpp`). Фрагмент → `scratch.cpp`, збірка як у [Notes 01](lab-01-a-box-of-bytes.notes.md). Лінкер — теж термінал: `c++ a.cpp b.cpp`.
 
 | | Зроби зараз | Зупинись, коли |
 |---|---|---|
@@ -99,11 +99,26 @@ int main() { std::cout << fact(3) << '\n'; }
 
 ## 3. Заголовок — обіцянка, `.cpp` — виконання
 
-`stack.hpp`: оголошення. `stack.cpp`: одне визначення `push`. Два `.cpp` з однаковим `push` без `inline` —
+Два файли в одній теці:
 
-**Очікуй:** linker `multiple definition of push`.
+```cpp
+// a.cpp
+void push() {}
+```
 
-`#pragma once` не рятує від двох визначень у двох одиницях трансляції. Він рятує від подвійного включення в *один* `.cpp`.
+```cpp
+// b.cpp
+void push() {}
+int main() {}
+```
+
+```bash
+c++ a.cpp b.cpp -o dup
+```
+
+**Очікуй:** linker `multiple definition of push` у терміналі.
+
+Одне визначення `push` має жити в `stack.cpp`; `stack.hpp` лише оголошує. `#pragma once` не рятує від двох визначень у двох одиницях трансляції. Він рятує від подвійного включення в *один* `.cpp`.
 
 ---
 

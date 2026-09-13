@@ -2,7 +2,7 @@
 
 Поруч із лабою: [lab-08-give-it-a-language.md](lab-08-give-it-a-language.md).
 
-Лаба — **що здати** (лексер, asm, чотири програми, `v1.0.0`). Цей файл — **РГР, яку хочеться писати**: розпізнати ланцюжок *своєї* мови або сказати, де він зламаний.
+Лаба — **що здати** (лексер, asm, чотири програми, `v1.0.0`). Цей файл — **РГР, яку хочеться писати**. Лексер і програми — `./build/ember lex …` та `./build/ember programs/fib.asm`. Дрібні C++-досліди — `scratch.cpp` як у [Notes 01](lab-01-a-box-of-bytes.notes.md).
 
 | | Зроби зараз | Зупинись, коли |
 |---|---|---|
@@ -68,7 +68,11 @@ flowchart LR
 
 ### Спробуй
 
-Поклади в файл і виклич лексер.
+Поклади `LOADI A, 0xGG` у `bad.asm` і:
+
+```bash
+./build/ember lex bad.asm
+```
 
 **Очікуй:** щось на кшталт `line 1: bad number`. Не «тихо взяли 0». Не падіння без рядка.
 
@@ -94,7 +98,32 @@ struct Token {
 
 ### Спробуй
 
-Три `append` у циклі, надрукуй `text`. Без `delete` — LSan. З `delete` — чисто.
+```cpp
+#include <iostream>
+#include <string>
+struct Token {
+    std::string text;
+    Token* next = nullptr;
+};
+void append(Token*& head, Token*& tail, const std::string& t) {
+    auto* n = new Token{t, nullptr};
+    if (!head) head = tail = n;
+    else { tail->next = n; tail = n; }
+}
+void destroy(Token* head) {
+    while (head) { Token* n = head->next; delete head; head = n; }
+}
+int main() {
+    Token *head = nullptr, *tail = nullptr;
+    append(head, tail, "ADD");
+    append(head, tail, "A");
+    append(head, tail, "B");
+    for (Token* p = head; p; p = p->next) std::cout << p->text << '\n';
+    destroy(head);
+}
+```
+
+**Очікуй:** три рядки `ADD` / `A` / `B`. Збери з ASan. Прибери `destroy` — на Linux з `ASAN_OPTIONS=detect_leaks=1` буде leak report.
 
 Масив на 1024 токени теж працює, якщо є стеля й повідомлення «too many tokens». Лаба просить список як ADT — зробіть інтерфейс `push_back` / `walk` / `destroy`, навіть якщо всередині масив (тоді в README: чому). Чесніший шлях — вузли.
 

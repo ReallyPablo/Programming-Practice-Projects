@@ -2,7 +2,7 @@
 
 > "There are 10 kinds of people in the world: those who understand binary, and those who don't."
 
-**Weeks:** 3–4 · **Language focus:** binary and hex, two's complement, bitwise operators, masks, shifts, flags · **Project step:** an ALU, a flags register, opcode decode, a CPU that can `step` · **Course:** [Programming Fundamentals](README.md) · **Previous:** [Lab 01](lab-01-a-box-of-bytes.md) · **Notes:** [theory + experiments](lab-02-bits-dont-lie.notes.md)
+**Weeks:** 3–4 · **Language focus:** binary and hex, two's complement, bitwise operators, masks, shifts, flags · **Project step:** an ALU, a flags register, opcode decode, a CPU that can `step` · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 01](lab-01-a-box-of-bytes.md) · **Notes:** [theory + experiments](lab-02-bits-dont-lie.notes.md)
 
 ---
 
