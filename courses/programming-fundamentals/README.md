@@ -119,6 +119,7 @@ Three pages, one evening, once per semester. Everything after this assumes them.
 | [Інструменти, термінал і git](setup.notes.md) | compiler, CMake and git installed per OS; the ten terminal commands; the git you actually need for tags and a public repo |
 | [C++ за годину](cpp-survival-kit.notes.md) | `cout`, variables, `if`, loops, functions, arrays, strings — exactly enough to read Lab 1's skeleton and write your four `TODO`s |
 | [Помилки, які ви точно побачите](errors.notes.md) | real compiler, linker and sanitizer messages, decoded. Keep it open all semester |
+| [CHECKS.md](CHECKS.md) + [`checks/`](checks/) | verified numbers your machine must produce, per lab. Run them the day you think you're done — not the day before the defense |
 
 Then copy the [starter skeleton](starter/README.md) and open [Lab 1](lab-01-a-box-of-bytes.md).
 
@@ -165,6 +166,30 @@ Same shape as the Python and JavaScript courses:
 7. **Reflection** — explain it at the whiteboard.
 8. **Stretch** — optional, when you're ahead.
 9. **Resources** — a few talks and chapters, each with one line on *why this one*.
+
+### A note on Levels, because the cohort is not uniform
+
+First-year groups arrive split: some wrote code at school, some have never opened
+a terminal. This course handles that with the **Levels**, not with two syllabuses.
+
+- **Basic** is a complete, passing lab. It is sized so that someone who has never
+  programmed can reach it in about **4–5 hours a week**, using the given code.
+  A student who lands on Basic for all eight labs has still built a working
+  virtual computer and should be told so.
+- **Standard** is the target, about **6–7 hours a week**. This is where the
+  course's claims get earned: the traces, the explanations, the README.
+- **Advanced** exists so the experienced students have somewhere to go. It is
+  deliberately *the same machine, harder* — never "do an extra lab." That keeps
+  the group defending one artifact in one vocabulary.
+
+Across all eight labs that is roughly **62–78 hours** at Basic and **102–118** at
+Standard. On a fixed 16-week semester, plan the group around Standard and expect
+a real tail at Basic.
+
+Some work is **given as code you read rather than write** — Lab 1's prompt and
+dump, Lab 3's `get16`, Lab 5's `show()`, Lab 7's `fact` listing, Lab 8's token
+list. In every case what is given is scaffolding and what is left is the lab's
+actual idea. Reading working code is a skill the course teaches on purpose.
 
 The three Levels map onto the program-wide rubric in [`INSTRUCTOR_HANDBOOK.md`](../../INSTRUCTOR_HANDBOOK.md) §6: Basic passes, Standard is the target, Advanced is distinction.
 

@@ -23,7 +23,7 @@ A **lexer** (scanner) walks characters and emits **tokens**: `Ident(LOADI)`, `Id
 
 An **assembler** turns tokens into the bytes `step` already understands, resolving labels (`loop:` → address). A **linked list** of tokens (or of labels) is the data structure: you do not know the length up front; you grow node by node. The list is an ADT (`push_back`, `walk`, `destroy`). Trees are the Stretch (an expression AST); you do not need a full compiler.
 
-And then you cash it in. [Lab 7](lab-07-call-and-return.md) gave you `CALL`, `RET` and a stack, and stopped at factorial because hand-assembling recursive Fibonacci means computing forty jump targets in hexadecimal — work that teaches arithmetic, not recursion. With an assembler, `fib` is twenty readable lines and the labels resolve themselves. **That is the argument for this whole lab**, and you should be able to make it at the defense: a language is not decoration, it is what makes the next program affordable.
+And then you cash it in. [Lab 7](lab-07-call-and-return.md) gave you `CALL`, `RET` and a stack. Recursive Fibonacci on this machine is 22 lines of source and 35 bytes — but it contains five addresses (`fib` three times, `ret_a` twice), and **inserting a single instruction moves every address below it**. By hand that is bookkeeping; with an assembler the labels resolve themselves and you think about the algorithm instead. **That is the argument for this whole lab**, and you should be able to make it at the defense: a language is not decoration, it is what makes the next program affordable.
 
 By the showcase, `ember programs/fib.asm` loads, assembles, runs, and prints `8`. A stranger can read the `.asm`. That is a computer with a language.
 
@@ -84,6 +84,8 @@ Unknown mnemonic, missing comma, `JMP` without a target — errors. Do not recov
 brilliantly; **fail clearly**.
 
 ### 3. Linked lists: when length is discovered, not declared
+
+A **working** `Token` node with `append`, walk and `destroy` is written out in full in [Notes 08 §3](lab-08-give-it-a-language.notes.md#3-список-бо-довжина-невідома). Treat it as given: copy it, compile it, understand it. Your work is the scanner that produces the tokens and the two passes that consume them — not re-deriving a linked list from scratch under deadline.
 
 ```cpp
 struct Token {
@@ -178,25 +180,32 @@ Tag `v1.0.0` as well as `lab-08`.
 
 ## Levels
 
-### Basic — "it reads text" (~11–13 hours)
-- A lexer: characters in, tokens out, comments and whitespace skipped.
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
+### Basic — "it reads text" (~9–11 hours)
+- A lexer: characters in, tokens out, comments and whitespace skipped. The token node and list from [Notes 08 §3](lab-08-give-it-a-language.notes.md) are given — use them.
 - Illegal characters and malformed numbers are rejected **with a line number**, not silently taken as 0.
 - `lex programs/hello.asm` prints one token per line; that output is pasted in the README.
 - `hello.asm` assembles and runs: `./ember programs/hello.asm` prints something you can read.
 - Repo tagged `lab-08`.
 
-### Standard — target (~17–19 hours)
+### Standard — target (~15–17 hours)
 - Everything in **Definition of done** above.
-- Two-pass assembler with labels; every mnemonic in [ISA.md](ISA.md) that your programs use, with instruction sizes taken from that same table.
-- `hello.asm`, `search.asm` and `fib.asm` all run. `fib.asm` is the **recursive** Fibonacci from Lab 7's convention, and `fib(6)` prints `8`.
-- Token list nodes are freed; the happy path is sanitizer-clean.
-- README a stranger can follow: diagram (source → tokens → bytes → CPU), the opcode table, build in three commands, pasted output.
+- Two-pass assembler with labels; every mnemonic your programs use, with sizes from [ISA.md](ISA.md).
+- `search.asm` runs, and sits in the README next to the hex you poked in Lab 4.
+- `fib.asm` runs: recursive Fibonacci, `fib(6)` prints `8`, `fib(10)` prints `55`.
+- Token list nodes freed; the happy path sanitizer-clean.
+- README a stranger can follow: diagram, memory map, instruction table, build in three commands, pasted output.
 - Tags `lab-08` and `v1.0.0`.
 
-### Advanced — distinction (~23–25 hours)
+### Advanced — distinction (~21–23 hours)
 - Everything above, plus `bounce.asm`: a pixel that moves across the display over several frames.
-- A disassembler: bytes back to a readable listing, checked against a program you assembled.
-- An expression parser (`ADD A, 2+3`) with a binary-tree AST, or `.define` macros.
+- A disassembler: bytes back to a listing, diffed against the source you assembled.
+- An expression parser with a binary-tree AST, or `.define` macros.
 
 ---
 

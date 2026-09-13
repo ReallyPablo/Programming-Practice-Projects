@@ -147,6 +147,7 @@ All of these read and write `A` (and read `B` where shown), and wrap at 8 bits.
 | `0x18` | `INC A` | 1 | Z N | `A = A + 1` | 2 |
 | `0x19` | `DEC A` | 1 | Z N | `A = A - 1` | 2 |
 | `0x1A` | `CMP A, B` | 1 | Z N C | compute `A - B`, set flags, **discard the result** | 4 |
+| `0x1B` | `MUL A, B` | 1 | Z N C | `A = A * B`, low 8 bits; `C` set if the real product did not fit | 7 |
 
 ### `0x2_` — moving data
 
@@ -246,6 +247,44 @@ RET:
 
 Push low-then-high, pop high-then-low. Get that backwards and `RET` jumps
 somewhere plausible-looking, which is far worse than crashing.
+
+### A worked example
+
+`fact(5) = 120`, verified. Thirty bytes. Type it in, `run` it, then trace it —
+this listing is **given** so that Lab 7 is about the stack, not about hexadecimal.
+
+```txt
+addr  bytes        source
+0000  20 05        LOADI A, 5        ; n = 5
+0002  54 07 00     CALL  fact
+0005  03           OUTN              ; prints 120
+0006  00           HALT
+
+; fact(n): argument in A, result in A. Clobbers B.
+0007  21 00        fact:  LOADI B, 0
+0009  1A                  CMP   A, B       ; n == 0 ?
+000A  31 1B 00            JZ    base
+000D  21 01               LOADI B, 1
+000F  1A                  CMP   A, B       ; n == 1 ?
+0010  31 1B 00            JZ    base
+0013  50                  PUSH  A          ; save n -- the call will destroy A
+0014  19                  DEC   A
+0015  54 07 00            CALL  fact       ; A = fact(n-1)
+0018  53                  POP   B          ; B = the n we saved
+0019  1B                  MUL   A, B       ; A = fact(n-1) * n
+001A  55                  RET
+001B  20 01        base:  LOADI A, 1
+001D  55                  RET
+```
+
+`fact(0)` and `fact(1)` both return 1 in 9 and 12 steps; `fact(5)` takes 60 steps
+and leaves `SP` back at `0xFFF`. If yours does not, one of `CALL`, `RET` or the
+`PUSH`/`POP` pairing is wrong — and a stack that does not return to `0xFFF` is
+the fastest way to find out.
+
+Note what the two `JZ base` operands share: `1B 00`. Insert one instruction
+anywhere above `base` and **both** of them change. That is the argument for
+[Lab 8](lab-08-give-it-a-language.md) in one sentence.
 
 ### Calling convention
 

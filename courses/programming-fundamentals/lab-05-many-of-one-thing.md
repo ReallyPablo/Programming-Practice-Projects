@@ -98,7 +98,32 @@ only needs 256. That is not a style preference; that is why Lab 2 existed.
 ### Milestones
 
 **M1 — The framebuffer.**
-Host functions `plot(Memory&, x, y)`, `clear(Memory&)`, `show(const Memory&)` that read and write `mem.data[0xA00 ...]` through the formula in theory §2. Out-of-range coordinates rejected. Draw a border from C++ so `show` has something to photograph.
+`show()` is **given** — it is a nested loop like Lab 1's dump, and it is scaffolding, not the idea:
+
+```cpp
+// GIVEN. Draw VRAM into the terminal.
+void show(const Memory& mem) {
+    for (int y = 0; y < 32; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            Byte cell = mem.data[0xA00 + y * 8 + (x / 8)];
+            bool lit  = (cell >> (7 - (x % 8))) & 1;
+            std::cout << (lit ? '#' : '.');
+        }
+        std::cout << '\n';
+    }
+}
+
+// YOURS. The same formula, backwards: set the bit instead of reading it.
+// Reject x >= 64 or y >= 32.
+void plot(Memory& mem, int x, int y);
+void clear(Memory& mem);      // 256 bytes of zero
+```
+
+`plot` is three lines and it *is* the lab. Read `show` until you can say which
+part of it is the stride, which is the byte, and which is the bit — then write
+`plot` without looking back at it.
+
+Draw a border from C++ so `show` has something to photograph.
 
 **M2 — `CLS` / `PLOT` / `SHOW` as instructions.**
 A poked program that plots three pixels and `HALT`s. `run`, then `show`.
@@ -114,17 +139,20 @@ If the pixel lands anywhere but the corner, exactly one of three things is wrong
 **M4 — Strings.**
 `OUTS` (`0x04`) prints a guest C-string with a cap. Poke `HELLO\0` at `0x800` and print it. Do **not** use `std::string` for the guest; you may use it for the host CLI.
 
-**M5 — Search and sort on a region.**
-- `find` already exists (Lab 4); point it at the data region, and at VRAM to find the first non-zero byte of the picture.
-- `sort <lo> <hi>` bubble or insertion, in-place on guest memory.
-- Put 8 bytes at `0x800`, dump, sort, dump again, paste both dumps. Optional: after each pass, draw `mem[lo+i]` as a bar and `show` — a visible sort in the terminal.
+**M5 — Search a region.**
+`find` already exists (Lab 4). Point it at the data region, and then at VRAM to
+find the first non-zero byte of the picture you drew. Two very different-looking
+questions, one loop.
+
+Sorting moved to **Advanced** — it is a good exercise and it is not what this lab
+is about. Take it if M1–M4 came out fast.
 
 ### Definition of done
 
 - 64×32 1-bit display **inside guest memory** at `0xA00`; `show`, `CLS`, `PLOT`, `SHOW`.
 - One pixel lit with `STORE [H], A` and no `PLOT`, plus a dump of VRAM with one byte explained.
 - Guest C-string print with a cap; a `HELLO` demo.
-- In-place sort of a memory region, before/after dumps.
+- `find` run over both the data region and VRAM.
 - The byte/bit address formula in the README, in one block.
 - Repo tagged `lab-05`.
 
@@ -132,24 +160,29 @@ If the pixel lands anywhere but the corner, exactly one of three things is wrong
 
 ## Levels
 
-### Basic — "there is a screen" (~10–12 hours)
-- VRAM lives **in `ember` memory** at `0xA00`, 256 bytes, one bit per pixel, exactly as [ISA.md §7](ISA.md#7-the-display-is-memory) describes.
-- `CLS`, `PLOT`, `SHOW` work; off-screen coordinates set `C` and change nothing.
-- A border drawn from C++ so `SHOW` has something to photograph.
-- A poked program that plots three pixels and halts.
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
+### Basic — "there is a screen" (~8–10 hours)
+- `plot` and `clear` written against the given `show`, using the formula from theory §2. Off-screen coordinates rejected.
+- VRAM lives **in `ember` memory** at `0xA00`, 256 bytes, one bit per pixel — no separate host array.
+- `CLS`, `PLOT`, `SHOW` as opcodes; a border drawn from C++; a poked program that plots three pixels.
 - Repo tagged `lab-05`.
 
-### Standard — target (~15–17 hours)
+### Standard — target (~13–15 hours)
 - Everything in **Definition of done** above.
-- The proof that the screen is memory: light the top-left pixel with `STORE [H], A` and no `PLOT` at all ([ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against)), then `dump 0xA00` and point at the byte you wrote.
-- `OUTS` with both a `'\0'` check **and** a cap; `HELLO` printed from `0x800`.
-- `sort <lo> <hi>` in place on guest memory, with before/after dumps pasted.
-- The 2D index formula in the README, in one line.
+- The proof that the screen is memory: light the top-left pixel with `STORE [H], A` and no `PLOT` ([ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against)), then dump `0xA00` and point at the byte you wrote.
+- `OUTS` with both a `' '` check **and** a cap; `HELLO` printed from `0x800`.
+- `find` run over the data region and over VRAM.
+- The byte/bit formula in the README, in one block.
 
-### Advanced — distinction (~20–22 hours)
-- Everything above, plus the sort visualised as bars on the display, one `SHOW` per pass.
-- A bouncing pixel animated from a host loop.
-- Optional: `rowmin <y>` — the leftmost lit pixel in a row.
+### Advanced — distinction (~19–21 hours)
+- Everything above, plus `sort <lo> <hi>` in place on guest memory, with before/after dumps.
+- The sort visualised as bars on the display, one `SHOW` per pass.
+- A bouncing pixel animated from a host loop, or `rowmin <y>`.
 
 ---
 
@@ -159,7 +192,7 @@ If the pixel lands anywhere but the corner, exactly one of three things is wrong
 - [ ] `CLS`/`PLOT`/`SHOW` opcodes; three-pixel program.
 - [ ] A pixel drawn with `STORE [H], A`; VRAM dump in the README.
 - [ ] `OUTS` with `'\0'` and a cap.
-- [ ] `sort` on guest memory; evidence in the README.
+- [ ] `find` over data and over VRAM; evidence in the README.
 - [ ] Git tag `lab-05`.
 
 ---
@@ -178,7 +211,9 @@ If the pixel lands anywhere but the corner, exactly one of three things is wrong
 
 ## Stretch
 
-Bit-pack the framebuffer if you didn't. Animate a bouncing pixel (`run` in a host loop that `show`s every N steps — a poor man's game loop). Visualize sort as bars. Optional: `rowmin <y>` prints the leftmost lit pixel in that row.
+`sort <lo> <hi>`, bubble or insertion, in place on guest memory: put 8 bytes at `0x800`, dump, sort, dump again, paste both. Then draw `mem[lo+i]` as a bar and `show` after each pass — a sort you can watch.
+
+Animate a bouncing pixel (`run` in a host loop that `show`s every N steps — a poor man's game loop). Visualize sort as bars. Optional: `rowmin <y>` prints the leftmost lit pixel in that row.
 
 ---
 

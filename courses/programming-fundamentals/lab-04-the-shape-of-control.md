@@ -149,14 +149,20 @@ yourself in Lab 8, when the assembler has to produce exactly those bytes.
 
 ## Levels
 
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
 ### Basic — "it can loop" (~8–10 hours)
 - `step` is a total `switch`: every known opcode has a `case`, `default` reports `unknown opcode 0x..` and halts.
 - `JMP`, `JZ`, `JNZ`, `CMP` from [ISA.md](ISA.md). A taken jump sets `PC` and does **not** also add the size.
 - `run` has a documented max-step limit, so a bad `JMP` cannot hang the process.
-- The countdown program from [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) runs and prints `3 2 1`.
+- The countdown from [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) runs and prints `3 2 1`.
 - Repo tagged `lab-04`.
 
-### Standard — target (~14–15 hours)
+### Standard — target (~13–15 hours)
 - Everything in **Definition of done** above.
 - The countdown traced in the README (`PC`, `A`, `Z` per step) next to the equivalent C++ `while`. Same shape, two notations.
 - A `find <lo> <hi> <byte>` command written as a C++ loop.

@@ -185,23 +185,26 @@ Three experiments, evidence in the README:
 
 ## Levels
 
-Pick a landing spot before you start. **Standard is the target**; Basic is a real,
-passing lab, not a failure. Hours are for a first-year working alone.
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
 
-### Basic — "the box is honest" (~8–10 hours)
+### Basic — "the box is honest" (~6–8 hours)
 - The [starter skeleton](starter/README.md) builds with C++17, `-Werror` and sanitizers on Debug.
 - All four `TODO(lab-01)` markers are gone: `mem_get`, `mem_set`, the ASCII gutter, `show_byte`.
 - `dump`, `get`, `set`, `quit` work; out-of-range addresses are rejected with a message.
 - README has your `sizeof` table and pasted `dump` / `get` output.
 - Repo tagged `lab-01`.
 
-### Standard — target (~14–16 hours)
+### Standard — target (~11–13 hours)
 - Everything in **Definition of done** above.
 - Notes §§1–4 run and written up, in your own words.
-- The three M4 breakages documented with pasted terminal output: unsigned wrap, `0.1 + 0.2`, and `"AB\0"` visible in a dump.
+- The four M4 breakages documented with pasted terminal output: unsigned wrap via `inc`, `0.1 + 0.2`, `"AB "` in the dump, and the missing `{}`.
 - README explains *why* an `ember` cell is `std::uint8_t` and not `int`.
 
-### Advanced — distinction (~20 hours)
+### Advanced — distinction (~16 hours)
 - Everything above, plus the Stretch: `set16` and the endianness answer, proven with a dump.
 - `.clang-format` chosen and applied to the whole tree.
 - Optional: the same `int x = 65;` in Compiler Explorer, with the instruction identified.

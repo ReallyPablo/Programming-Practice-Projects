@@ -121,7 +121,21 @@ This week `H` is stepped by hand, and that is enough to see it.
 ### Milestones
 
 **M1 — Guest addresses are numbers.**
-`get`/`set` already take an address. Add `get16`/`set16` little-endian. `regs` also prints `PC` and `H`. Document endianness with a dump: `set16 0 0x1234` → bytes `34 12`. Little-endian is not a style choice here: [ISA.md §4](ISA.md#4-encoding) says every 16-bit operand in the instruction stream is stored low byte first, so `LOADH H, 0x0A00` assembles to `28 00 0A`.
+`get`/`set` already take an address. Now a 16-bit pair, little-endian. **`get16` is given** — read it, then write `set16` as its mirror image:
+
+```cpp
+// GIVEN. Read two bytes as one 16-bit value, low byte first.
+std::uint16_t get16(const Memory& mem, std::size_t addr) {
+    Byte lo = mem_get(mem, addr);
+    Byte hi = mem_get(mem, addr + 1);
+    return static_cast<std::uint16_t>(lo | (hi << 8));
+}
+
+// YOURS. Write `value` as two bytes, low byte first. Reject addr + 1 >= MEM_SIZE.
+bool set16(Memory& mem, std::size_t addr, std::uint16_t value);
+```
+
+`hi << 8` is Lab 2 doing a job. `lo |` is the other half of it. `regs` also prints `PC` and `H`. Document endianness with a dump: `set16 0 0x1234` → bytes `34 12`. Little-endian is not a style choice here: [ISA.md §4](ISA.md#4-encoding) says every 16-bit operand in the instruction stream is stored low byte first, so `LOADH H, 0x0A00` assembles to `28 00 0A`.
 
 **M2 — The `0x2_` group.**
 Implement [ISA.md](ISA.md) rows `0x20`–`0x2C`: `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `MOV`, and the address register — `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. Plus `OUT` (`0x02`) and `OUTN` (`0x03`) from the control group, so a program can say something.
@@ -150,23 +164,29 @@ Then: temporarily write a 3-line program that does `data[MEM_SIZE] = 1` (off-by-
 
 ## Levels
 
-### Basic — "the CPU can reach memory" (~10–12 hours)
-- `get16` / `set16`, little-endian, documented with a dump.
-- `LOADI A/B`, `LOAD`, `STORE`, `OUT` from [ISA.md](ISA.md), with the sizes from the table.
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
+### Basic — "the CPU can reach memory" (~8–10 hours)
+- `set16` written as the mirror of the given `get16`, little-endian, documented with a dump.
+- `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `OUT`, `OUTN` — sizes from [ISA.md](ISA.md).
 - `run` executes until `HALT` or an error.
 - A program with code at `0x000` and data at `0x800` that prints a character.
 - Repo tagged `lab-03`.
 
-### Standard — target (~15–17 hours)
+### Standard — target (~13–15 hours)
 - Everything in **Definition of done** above.
-- The address register `H`: `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`. This is the lab's whole idea in hardware — a register that holds an address instead of a value.
-- `OUTN` as well as `OUT`.
+- The address register `H`: `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. This is the lab's whole idea in hardware — a register that holds an address instead of a value.
+- The seven-instruction `H` walk in M3, traced with `regs` showing `H` move.
 - An ASan report for a deliberate off-by-one, pasted, then fixed.
-- One paragraph in the README: host pointer vs guest address, and a bug that mixing them would cause.
+- One paragraph: host pointer vs guest address, and a bug that mixing them would cause.
 
-### Advanced — distinction (~20 hours)
+### Advanced — distinction (~18 hours)
 - Everything above, plus a `void dump(const void* ptr, std::size_t n)` that hexdumps any host object — `dump(&cpu, sizeof(cpu))`.
-- A four-byte copy loop driven by `H`, stepped by hand and traced.
+- A four-byte copy driven by `H` and `MOV`, stepped by hand and traced.
 
 ---
 

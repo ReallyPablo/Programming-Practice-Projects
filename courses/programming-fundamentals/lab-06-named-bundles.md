@@ -58,7 +58,7 @@ The values are not yours to choose: copy them from [ISA.md](ISA.md). What you ga
 | **Automatic (stack)** | Entering the block | Leaving the block | `CPU cpu` in `main`; locals in `step` |
 | **Dynamic (heap)** | `new T` | `delete p` | A host `new Sprite[]`, **or** a guest heap: `0xC00`–`0xEFF` with an allocation pointer |
 
-You will do **both** a little: one host `new`/`delete` so ASan/LSan can teach you, and a **guest bump allocator** (`ALLOC n` → returns an address, advances a pointer) so ember-programs can get a block without C++ `new`. The guest heap is the one that belongs in a VM; the host `new` is the one that belongs in the notes.
+This lab you do the **host** side: one `new`/`delete` run three ways, so ASan tells you what a dangling pointer and a double free actually look like. `ember` reserves `0xC00`–`0xEFF` for a guest heap, and giving it an `ALLOC` is the Stretch — the reserved region on your memory map is enough for now.
 
 Rules: every `new` has one `delete`; every `new[]` has `delete[]`. After `delete`, the pointer is **dangling** — set it to `nullptr`. Do not use a dangling pointer. **Garbage** (leak) is a heap object with no pointer left; **dangling** is a pointer with no object left. They are opposites. Both are bugs.
 
@@ -89,12 +89,7 @@ prefer `T`, `T*` or `T&`, is [Lab 7](lab-07-call-and-return.md)'s subject.
 **M2 — Sprites (records + array).**
 `struct Sprite { uint8_t x, y; int8_t vx, vy; bool alive; };` and `Sprite sprites[8]` on the host. Command `sprite <i> <x> <y> <vx> <vy>` fills one. Command `tick` updates all alive sprites (bounce off the 64×32 edges) and `show`s. A demo: two sprites bouncing.
 
-**M3 — Guest heap: a bump allocator.**
-The heap region is `0xC00`–`0xEFF` ([ISA.md §2](ISA.md#2-memory-map)). `CPU` holds `uint16_t heap_ptr`, starting at `HEAP_LO`. The `ALLOC` opcode (`0x60`): allocate `A` bytes, put the block's address in `H`, advance `heap_ptr`. No room — set `C` and leave `H` alone. A `dump` of that region after two allocations shows two blocks with no gap between them.
-
-Two allocations, then explain in the README: why is there no gap? What would have to change for `FREE` to be possible?
-
-**M4 — Host new/delete, on purpose.**
+**M3 — Host new/delete, on purpose.**
 A *temporary* `scratch.cpp` (same `c++` line as the notes) run three times: `new` and forget (**leak**), `new`/`delete`/read (**use-after-free**), `new`/`delete`/`delete` (**double-free**). Paste the sanitizer output for each and add a one-line moral.
 
 **On macOS with an Apple chip the leak case produces no report** — LeakSanitizer is not available there, and no configuration fixes it. Two ways to pass this milestone, both fully acceptable:
@@ -108,7 +103,7 @@ Say in the README which route you took and why. Delete `scratch.cpp` before the 
 
 - `CPU` / `Flags` / `Op` are structs/enum; `sizeof` documented.
 - At least two bouncing sprites; `tick` + `show`.
-- `ALLOC` bump allocator over `0xC00`–`0xEFF`; `C` set on failure; dump evidence.
+- The heap region `0xC00`–`0xEFF` marked on your README's memory map, even though nothing writes there yet.
 - Use-after-free and double-free demonstrated with pasted sanitizer output; leak either demonstrated on Linux/WSL or explained, with the platform note in the README.
 - Repo tagged `lab-06`.
 
@@ -116,23 +111,29 @@ Say in the README which route you took and why. Delete `scratch.cpp` before the 
 
 ## Levels
 
-### Basic — "the machine has a shape" (~9–11 hours)
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
+### Basic — "the machine has a shape" (~7–9 hours)
 - `struct Flags`, `struct CPU`, `enum class Op : std::uint8_t` with the values from [ISA.md](ISA.md).
 - `step` switches on `Op`, not on a raw byte. Unknown bytes are still an error.
 - **No behaviour change**: every Lab 5 program still runs. This milestone is a refactor.
 - `sizeof(CPU)` and the field layout in the README.
 - Repo tagged `lab-06`.
 
-### Standard — target (~15–16 hours)
+### Standard — target (~12–14 hours)
 - Everything in **Definition of done** above.
 - `struct Sprite` and `Sprite sprites[8]`; `sprite` and `tick` commands; at least two sprites bouncing off the 64×32 edges.
-- `ALLOC` as a bump allocator over `0xC00`–`0xEFF`, `C` set when it does not fit, with a dump after two allocations.
-- Two sanitizer reports pasted and explained: use-after-free and double-free. (Leaks: see the note in M4 — on Apple Silicon you explain instead of paste.)
+- Two sanitizer reports pasted and explained: use-after-free and double-free. (Leaks: see M3 — on Apple Silicon you explain instead of paste.)
+- The full memory map in your README, heap region marked even though nothing writes there yet.
 
-### Advanced — distinction (~19–21 hours)
-- Everything above, plus a real leak report produced on Linux or in WSL/Docker.
-- A tagged `struct Value` and a one-page note on unions vs tagged structs.
-- A guest `FREE` as a free list — a linked-list preview of Lab 8.
+### Advanced — distinction (~18–20 hours)
+- Everything above, plus the Stretch guest heap: `ALLOC` as a bump allocator over `0xC00`–`0xEFF`, `C` set when it does not fit, dump after two allocations.
+- A real leak report produced on Linux or in WSL/Docker.
+- A tagged `struct Value` and a note on unions vs tagged structs, or a guest `FREE` as a free list.
 
 ---
 
@@ -140,7 +141,6 @@ Say in the README which route you took and why. Delete `scratch.cpp` before the 
 
 - [ ] Structs + `enum class Op`; layout/`sizeof` in the README.
 - [ ] `Sprite sprites[8]`; bounce demo.
-- [ ] Guest `alloc` bump pointer; dump.
 - [ ] Sanitizer reports for use-after-free and double-free, plus the leak (report or documented platform limit), and the fixes.
 - [ ] Git tag `lab-06`.
 
@@ -152,13 +152,15 @@ Say in the README which route you took and why. Delete `scratch.cpp` before the 
 2. `enum` vs `enum class` vs `#define ADD 0x10`. Why bother?
 3. Stack vs heap: who allocates, who frees? Print `&local` and the pointer from `new` with `std::cout` — what is different?
 4. Leak vs dangling vs double-free. Which sanitizer message is which?
-5. Why is a bump allocator enough for `ember` this week? What can't it do that `delete` can?
+5. A bump allocator only ever moves forward. What can it not do that `delete` can? What would it have to store to make `FREE` possible?
 7. Where do the heap and the stack sit in the [memory map](ISA.md#2-memory-map)? Which way does each one grow, and what happens on a real machine when they meet?
 6. Why pass `CPU&` into `step` instead of copying `CPU` by value?
 
 ---
 
 ## Stretch
+
+**A guest heap.** `0xC00`–`0xEFF` is reserved for it. `CPU` holds a `uint16_t heap_ptr` starting at `HEAP_LO`; the `ALLOC` opcode (`0x60`) allocates `A` bytes, puts the block's address in `H` and advances the pointer. No room — set `C`, leave `H` alone. Dump the region after two allocations and explain why there is no gap between the blocks.
 
 A tagged `struct Value { enum class Kind { Byte, Addr, SpriteId }; uint16_t bits; };` and a one-page note on unions vs tagged structs (unions: same memory, *you* remember the kind; tagged: the kind is in the bytes). Guest `free` as a free-list (a **linked list** preview of Lab 8). `std::unique_ptr<Sprite>` as the host version of "delete is in the destructor" — look, don't rewrite the course.
 

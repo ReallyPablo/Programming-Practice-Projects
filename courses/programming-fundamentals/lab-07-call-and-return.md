@@ -55,22 +55,23 @@ int fact(int n) {
 
 Without a base case, stack overflow. Tail recursion is a special case compilers *may* turn into a loop; do not count on it.
 
-Guest `fact`: `CALL` itself with `A` holding `n`. The machine gives you a stack for return addresses; **everything else you must save yourself**. Concretely, `fact` needs `n` back after the recursive call has finished stomping on `A` — so it pushes it first:
+Guest `fact`: `CALL` itself with `A` holding `n`. The machine gives you a stack for return addresses; **everything else you must save yourself**. `fact` needs `n` back after the recursive call has finished stomping on `A`, so it pushes it first:
 
 ```txt
-fact:   CMP   A, one        ; is n <= 1 ?
-        JZ    base
-        PUSH  A             ; save n, because the call will destroy A
+fact:   ...                 ; if n is 0 or 1, jump to base
+        PUSH  A             ; save n -- the call will destroy A
         DEC   A             ; n - 1
         CALL  fact          ; A = fact(n-1)
         POP   B             ; B = the n we saved
-        ...                 ; A = A * B  -- you have no MUL. See M3.
+        MUL   A, B          ; A = fact(n-1) * n
         RET
 base:   LOADI A, 1
         RET
 ```
 
 That `PUSH` before the call and `POP` after it *is* what a stack frame is. Real compilers emit the same two instructions for the same reason; they just also have a name for the region between them.
+
+The full listing, with addresses and assembled bytes, is **given** in [ISA.md §6](ISA.md#a-worked-example). Type it in, run it, trace it. You are not meant to derive thirty bytes of hexadecimal — you are meant to watch a stack grow and shrink.
 
 The calling convention — argument in `A`, result in `A`, `B` and `H` caller-saved — is written down once, in [ISA.md §6](ISA.md#calling-convention). Restate it in your own README. Two functions that disagree about who saves `B` is the defining bug of this lab, and it is invisible until you can point at the rule.
 
@@ -121,11 +122,19 @@ Overflow (below `STACK_LO`) and underflow (above `STACK_HI`) stop the machine wi
 Exactly as [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly) specifies: push low byte then high byte of `PC + 3`, pop high then low. A program: `CALL printA`, `HALT`; `printA: OUT`, `RET`. Trace it in the README — one line per step with `PC`, `SP`, and the two stack bytes. Say out loud why the pushed address is `PC + 3` and not the address of the `CALL` itself.
 
 **M3 — Recursion: `fact`.**
-Recursive factorial in poked bytecode. `fact(5)` = 120.
+Implement `MUL` (`0x1B`) — one line in your ALU — then poke in the listing from [ISA.md §6](ISA.md#a-worked-example) and run it.
 
-You have no `MUL`, and that is on purpose — write one. Either a helper subroutine (`mul: A = A * B` by repeated addition, which is a loop you already know how to write) or a new opcode of your own in the `0x7_` range, documented in your README in [ISA.md](ISA.md) format. Say which you chose and why.
+- `fact(5)` prints `120`, in 60 steps, and `SP` is back at `0xFFF`.
+- `fact(0)` and `fact(1)` both print `1`. Change the first byte pair and check.
+- Trace it: one line per `CALL` and `RET` with `SP` and `A`. How deep does it go?
 
-In the README: your calling convention, a trace showing `SP` at each depth, and **one deliberate overflow** — remove the base case, or shrink the stack region — caught by your own error, not by a host crash.
+Then make it yours — one of these, your pick, written up in the README:
+
+- Change it to count down and print each `n` on the way in and out, so the trace matches the C++ `fact` from the notes.
+- Remove the `PUSH A` / `POP B` pair and explain what it prints and why.
+- Make `fact(6)` and explain the answer (720 does not fit in a byte — what does `C` say?).
+
+Finally, **one deliberate overflow**: delete the base case, or shrink the stack region. It must be caught by *your* error message, not by a host crash.
 
 **M4 — Split the binary.**
 At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display` if you have it). No giant `main.cpp`. A `CMakeLists.txt` that lists them. The defense may ask "why is `push` not in `cpu.cpp`?"
@@ -134,7 +143,7 @@ At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display
 
 - `SP`, `PUSH`/`POP`, and a `Stack` ADT with overflow/underflow handled.
 - `CALL`/`RET` match [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly) byte for byte; a non-recursive call demo, traced.
-- Recursive `fact(5) = 120` in bytecode; calling convention written down; overflow demonstrated.
+- `MUL` implemented; recursive `fact(5) = 120` running; calling convention written down; the listing modified once and explained; overflow demonstrated.
 - Multiple `.cpp`/`.hpp` files; CMake lists them.
 - Repo tagged `lab-07`.
 
@@ -142,23 +151,30 @@ At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display
 
 ## Levels
 
-### Basic — "a call comes back" (~10–12 hours)
-- `SP` starts at `0xFFF`; `PUSH A` / `POP A` / `PUSH B` / `POP B` per [ISA.md](ISA.md).
-- Overflow below `0xF00` and underflow above `0xFFF` stop the machine with a message. No crash, no silent wrap.
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
+### Basic — "a call comes back" (~8–10 hours)
+- `SP` starts at `0xFFF`; `PUSH A` / `POP A` / `PUSH B` / `POP B` per [ISA.md](ISA.md), empty-descending.
+- Overflow below `0xF00` and underflow above `0xFFF` stop the machine with **your** message. No host crash, no silent wrap.
 - `CALL` / `RET` with the byte order from [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly), and a one-level call demo (`CALL printA` / `OUT` / `RET` / `HALT`) traced in the README.
-- The project is split across at least four translation units, all listed in `CMakeLists.txt`.
+- `MUL` implemented; the given `fact` listing poked in and printing `120`.
 - Repo tagged `lab-07`.
 
-### Standard — target (~14–16 hours)
+### Standard — target (~13–15 hours)
 - Everything in **Definition of done** above.
-- The `Stack` ADT: `stack.hpp` / `stack.cpp`, `push`/`pop` returning `bool`, and nothing outside `stack.cpp` touching the representation.
-- Recursive **factorial** in poked bytecode, `fact(5) = 120`, following the calling convention from [ISA.md §6](ISA.md#calling-convention) — and that convention restated in your own README.
-- One deliberate stack overflow (a missing `RET`, or a tiny stack region), with your own error message, not a host crash.
+- The `Stack` ADT: `stack.hpp` / `stack.cpp`, `push`/`pop` returning `bool`, and nothing outside `stack.cpp` touching the representation. The project split across at least four translation units, all listed in `CMakeLists.txt`.
+- `fact` traced by depth, modified once (M3 offers three options) and the result explained.
+- The calling convention from [ISA.md §6](ISA.md#calling-convention) restated in your own README.
+- One deliberate stack overflow caught by your own error.
 
 ### Advanced — distinction (~18–19 hours)
-- Everything above, plus `PUSH H` / `POP H` and a function that needs them.
-- A `queue` ADT, or a linked-node `Stack` behind the same interface, with one advantage of each written down.
-- Optional: tail-recursive vs naive `fact` in Godbolt — did the compiler turn one into a loop?
+- Everything above, plus `MUL` written as a **subroutine** by repeated addition, and a step-count comparison against the opcode.
+- `PUSH H` / `POP H` and a function that needs them.
+- A linked-node `Stack` behind the same interface, swapped in without touching `cpu.cpp`.
 
 ---
 
@@ -166,7 +182,7 @@ At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display
 
 - [ ] `SP` + `PUSH`/`POP`; `stack.hpp`/`cpp`; push/pop fail cleanly.
 - [ ] `CALL`/`RET`; trace of a one-level call showing `PC` and `SP`.
-- [ ] Recursive `fact`; multiplication solved and documented; convention documented; overflow shown.
+- [ ] `MUL`; recursive `fact` running and traced; one modification explained; convention documented; overflow shown.
 - [ ] Project split across headers; CMake updated.
 - [ ] Git tag `lab-07`.
 
@@ -187,13 +203,15 @@ At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display
 
 ## Stretch
 
+Write `MUL` as a **subroutine** instead of an opcode — repeated addition in a loop, using the stack for its own saved registers. Then use it from `fact` and compare step counts. This is the honest way an 8-bit machine without a multiplier does it.
+
 `PUSH H` / `POP H` ([ISA.md](ISA.md) `0x56`/`0x57`) and a subroutine that needs them — one that walks memory and must restore the caller's pointer.
 
 A linked-node `Stack` behind the same `stack.hpp` interface; swap the implementation without touching `cpu.cpp` and write down one advantage of each. That swap *is* what an ADT buys you.
 
 Tail-recursive `fact` vs naive in [Godbolt](https://godbolt.org/) — did the compiler turn one into a loop? `inline` vs a normal function; and don't `#define` macros that evaluate `x++` twice. Templates: `template<typename T> void swap(T& a, T& b)` as a five-line extra, not a second project.
 
-If `fact` came out clean and you want more: sketch recursive `fib` as bytecode on paper and count the instructions. Then stop — you are meant to feel that, and [Lab 8](lab-08-give-it-a-language.md) is the answer.
+If `fact` came out clean and you want more: look at the two `JZ base` operands in the given listing. They are the same two bytes. Now insert one instruction above `base` and work out how many bytes in the listing change. Then stop — you are meant to feel that, and [Lab 8](lab-08-give-it-a-language.md) is the answer.
 
 ---
 

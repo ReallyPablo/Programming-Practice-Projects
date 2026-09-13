@@ -148,23 +148,28 @@ notes experiment §3 must appear in `cpu.cpp`, not only in a scratch file.
 
 ## Levels
 
-### Basic — "it steps" (~9–11 hours)
-- ALU functions on `uint8_t` for `ADD`, `SUB`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR`, each returning a value and setting `Z`/`N`/`C`.
+**Pick a landing spot before you start.** Basic is a real, passing lab — not a
+failure. Standard is the target. Advanced exists so that the people who arrive
+already knowing how to program have somewhere to go, and it is not extra credit
+for finishing early: it is a harder version of the same machine. Hours are for
+someone doing this subject for the first time.
+
+### Basic — "it steps" (~8–10 hours)
+- ALU functions on `uint8_t` for `ADD`, `SUB`, `AND`, `OR`, `XOR`, `NOT`, `SHL`, `SHR`, `INC`, `DEC`, each returning a value and setting `Z`/`N`/`C`.
 - `regs` prints `PC A B Z N C`.
 - `step` runs `NOP`, `HALT` and `ADD` from bytes you poked with `set`.
-- Your opcode table in the README points at [ISA.md](ISA.md) and lists what you implemented so far.
+- The README says which rows of [ISA.md](ISA.md) you have implemented.
 - Repo tagged `lab-02`.
 
-### Standard — target (~14–16 hours)
+### Standard — target (~12–14 hours)
 - Everything in **Definition of done** above.
-- The full `0x1_` group from [ISA.md](ISA.md), including `INC`/`DEC`, with sizes matching the table exactly.
-- `decode()` extracts the group with `(op >> 4) & 0x0F` — a mask and a shift, not a magic number.
+- `decode()` extracts the group with `(op >> 4) & 0x0F` — a mask and a shift, not a magic number per instruction.
 - A trace of a 3+ instruction program in the README: `PC`, opcode, resulting `A` and flags, one line per step.
 - Two worked wrap/carry examples (`200 + 100`, and one of your own).
 
-### Advanced — distinction (~19–21 hours)
+### Advanced — distinction (~17–19 hours)
 - Everything above, plus `ADD` implemented **as bits** (the notes §5 loop) used as the real ALU, with `uint8_t(a+b)` kept as a Debug assert.
-- A status byte in memory mirroring the flags, so a guest program can read its own flags.
+- A status byte in the spare region mirroring the flags, so a guest program can read its own flags.
 
 ---
 
