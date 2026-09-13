@@ -27,7 +27,7 @@ Work happens in the **terminal**: you compile with `c++` / `cmake`, you talk to 
 
 This course sits in the same family as the [Python](../python/README.md) and [JavaScript](../javascript/README.md) courses in this repository: **one project, eight two-week labs**, theory that exists because the next feature needs it, notes you can run on a pair of screens, a five-minute defense instead of a paper exam.
 
-The wider 42-lab program — and behind it [École 42](https://42.fr/) — is the posture: you learn by shipping something you can demo, not by collecting completed worksheets.
+The wider [42-lab program](../../README.md) — and behind it [École 42](https://42.fr/) — is the posture: you learn by shipping something you can demo, not by collecting completed worksheets.
 
 For the *machine* itself we borrowed freely:
 
@@ -185,7 +185,7 @@ Everything essential is free.
 - **K&R, *The C Programming Language*** — short, dense. Chapters 1–5 overlap Labs 1–5.
 - **[Crafting Interpreters](https://craftinginterpreters.com/)** — scanning and tokens (Lab 8). You are not building Lox; you are stealing the attitude.
 - **[CS:APP](https://csapp.cs.cmu.edu/)** — bits, memory, and machine code when you want more depth on Labs 2–3.
-- **Crash Course Computer Science** — binary, registers, machine code in about ten minutes.
+- **[Crash Course Computer Science](https://www.youtube.com/playlist?list=PL8dPuuaLjXtNlUrzyH5r6jN9ulIgZBpdo)** — binary, registers, machine code in about ten minutes.
 
 ---
 

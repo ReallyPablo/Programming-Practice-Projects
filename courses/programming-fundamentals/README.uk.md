@@ -27,11 +27,11 @@
 
 Той самий підхід, що в курсах [Python](../python/README.md) і [JavaScript](../javascript/README.md) у цьому репозиторії: один проєкт на вісім лаб по два тижні. Теорія з’являється тоді, коли без неї не зібрати наступний шматок. Notes можна ганяти на парі. Захист — п’ять хвилин біля екрана.
 
-І ще [École 42](https://42.fr/) та програма на 42 лабораторні: вчишся, коли є що показати.
+І ще [програма на 42 лабораторні](../../README.md) в цьому репозиторії та [École 42](https://42.fr/): вчишся, коли є що показати.
 
 Саму машину ми склали з кількох джерел:
 
-- **[8-бітний комп’ютер Ben Eater на макетці](https://eater.net/8bit)** — регістри й ALU, які видно руками. Якщо Lab 2 здається абстракцією — подивіться будь-який епізод.
+- **[Ben Eater — 8-бітний комп’ютер на макетній платі](https://eater.net/8bit)** — регістри й ALU можна побачити на столі. Якщо Lab 2 важко уявити — відкрийте будь-яке відео.
 - **[NAND2Tetris](https://www.nand2tetris.org/)** (Nisan і Schocken) — від простих частин до програми. Наші вісім лаб — коротша версія того ж шляху, уже на C++.
 - **CHIP-8** — екран 64×32 з бітів; у Lab 5 схожий.
 - **[Crafting Interpreters](https://craftinginterpreters.com/)** (Bob Nystrom) — підхід Lab 8: мова починається зі сканера, який з тексту робить токени, а з токенів — байти, які процесор уже вміє виконати.
@@ -52,18 +52,33 @@ C++ тут потрібен, щоб бачити байти. Беремо нев
 
 Запуск як у будь-якої консольної програми: `./build/ember`. З’являється prompt — рядок, куди пишете команду. Пишете `dump`, `get 0`, `step`. Пізніше: `./build/ember programs/fib.asm`.
 
-```mermaid
-flowchart LR
-    L1[Lab 1<br/>Типи й компіляція<br/><i>коробка байтів, dump</i>] --> L2[Lab 2<br/>Біти й системи числення<br/><i>прапорці, ALU, опкоди</i>]
-    L2 --> L3[Lab 3<br/>Вказівники й адреси<br/><i>load, store, peek</i>]
-    L3 --> L4[Lab 4<br/>Умови, цикли, область видимості<br/><i>стрибки, пошук</i>]
-    L4 --> L5[Lab 5<br/>Масиви й рядки<br/><i>екран, sort, текст</i>]
-    L5 --> L6[Lab 6<br/>struct, enum, купа<br/><i>CPU як дані, спрайти</i>]
-    L6 --> L7[Lab 7<br/>Функції й стек<br/><i>CALL/RET, рекурсія</i>]
-    L7 --> L8[Lab 8<br/>Мова<br/><i>лексер, асемблер, програми</i>]
-```
-
 Усі збирають ту саму машину. Відрізняються README, зайві інструкції, якщо захочете, і програми, які ви для неї напишете.
+
+---
+
+## Вісім лабораторних
+
+| Лаба | Ідея | У `ember` |
+|---|---|---|
+| 1. [A Box of Bytes](lab-01-a-box-of-bytes.md) · [notes](lab-01-a-box-of-bytes.notes.md) | Компіляція, типи як розмір, overflow, `const`, символи як числа | CMake, 4 КБ, `dump`, `get`/`set` |
+| 2. [Bits Don't Lie](lab-02-bits-dont-lie.md) · [notes](lab-02-bits-dont-lie.notes.md) | Двійкова й hex, доповнення до двох, прапорці, бітові операції | ALU, прапорці, розбір опкода, `step` |
+| 3. [Addresses, Not Names](lab-03-addresses-not-names.md) · [notes](lab-03-addresses-not-names.notes.md) | Вказівники, `&`/`*`, `void*`, `sizeof` | `LOAD`/`STORE`, лічильник команд по пам’яті |
+| 4. [The Shape of Control](lab-04-the-shape-of-control.md) · [notes](lab-04-the-shape-of-control.notes.md) | Булеві, `if`/`switch`/`while`/`for`, коротке замикання, блоки | `JMP`/`JZ`, цикл у байткоді, лінійний пошук |
+| 5. [Many of One Thing](lab-05-many-of-one-thing.md) · [notes](lab-05-many-of-one-thing.notes.md) | Масиви, індекс у сітці, рядки, пошук, прості сорти | Екран 64×32, `PLOT`, сортування шматка пам’яті, друк рядка |
+| 6. [Named Bundles](lab-06-named-bundles.md) · [notes](lab-06-named-bundles.notes.md) | `struct`, `enum`, час життя, стек і купа, витоки | `CPU` як `struct`, купа, спрайти |
+| 7. [Call and Return](lab-07-call-and-return.md) · [notes](lab-07-call-and-return.notes.md) | Функції, передача за значенням і за вказівником, стек викликів, рекурсія, заголовки | Стек як окремий тип, `CALL`/`RET`, рекурсивний Fibonacci |
+| 8. [Give It a Language](lab-08-give-it-a-language.md) · [notes](lab-08-give-it-a-language.notes.md) | Токени, сканер, списки, синтаксичні помилки | Лексер і асемблер; `hello`, `search`, `fib`, `bounce` у `.asm` |
+
+Кожна лаба — **два тижні**. Тиждень 16 — показ робіт.
+
+| Тижні | Лаба | Тижні | Лаба |
+|---|---|---|---|
+| 1–2 | Lab 1 | 9–10 | Lab 5 |
+| 3–4 | Lab 2 | 11–12 | Lab 6 |
+| 5–6 | Lab 3 | 13–14 | Lab 7 |
+| 7–8 | Lab 4 | 15–16 | Lab 8 + показ |
+
+Тексти лаб — англійською. Notes — українською, їх зручно ганяти на парі. Поруч лежить [англійська версія цього файлу](README.md).
 
 ---
 
@@ -91,32 +106,6 @@ flowchart LR
 | **UBSan** | **UndefinedBehaviorSanitizer** (`-fsanitize=undefined`). Ловить, зокрема, переповнення знакового `int`. |
 | **UB** | Undefined behaviour: мова не обіцяє, що буде. Санітайзери частину цього показують одразу. |
 | **CMake** | Збірка проєкту: описуєте його один раз, далі `cmake --build` збирає однаково на macOS, Linux і Windows. |
-
----
-
-## Вісім лабораторних
-
-| # | Лаба | Notes | Що розумієте | Що з’являється в `ember` |
-|---|---|---|---|---|
-| 1 | [A Box of Bytes](lab-01-a-box-of-bytes.md) | [notes](lab-01-a-box-of-bytes.notes.md) | Компіляція, типи як розмір, overflow, `const`, символи як числа | Проєкт на CMake, 4 КБ пам’яті, hex-дамп, `get`/`set` |
-| 2 | [Bits Don't Lie](lab-02-bits-dont-lie.md) | [notes](lab-02-bits-dont-lie.notes.md) | Двійкова й hex, доповнення до двох, прапорці, бітові операції | ALU, прапорці, розбір опкода, `step` |
-| 3 | [Addresses, Not Names](lab-03-addresses-not-names.md) | [notes](lab-03-addresses-not-names.notes.md) | Вказівники, `&`/`*`, `void*`, `sizeof` | `LOAD`/`STORE`, лічильник команд по пам’яті |
-| 4 | [The Shape of Control](lab-04-the-shape-of-control.md) | [notes](lab-04-the-shape-of-control.notes.md) | Булеві, `if`/`switch`/`while`/`for`, коротке замикання, блоки | `JMP`/`JZ`, цикл у байткоді, лінійний пошук |
-| 5 | [Many of One Thing](lab-05-many-of-one-thing.md) | [notes](lab-05-many-of-one-thing.notes.md) | Масиви, індекс у сітці, рядки, пошук, прості сорти | Екран 64×32, `PLOT`, сортування шматка пам’яті, друк рядка |
-| 6 | [Named Bundles](lab-06-named-bundles.md) | [notes](lab-06-named-bundles.notes.md) | `struct`, `enum`, час життя, стек і купа, витоки | `CPU` як `struct`, купа, спрайти |
-| 7 | [Call and Return](lab-07-call-and-return.md) | [notes](lab-07-call-and-return.notes.md) | Функції, передача за значенням і за вказівником, стек викликів, рекурсія, заголовки | Стек як окремий тип, `CALL`/`RET`, рекурсивний Fibonacci |
-| 8 | [Give It a Language](lab-08-give-it-a-language.md) | [notes](lab-08-give-it-a-language.notes.md) | Токени, сканер, списки, синтаксичні помилки | Лексер і асемблер; `hello`, `search`, `fib`, `bounce` у `.asm` |
-
-Кожна лаба — **два тижні**. Тиждень 16 — показ робіт.
-
-| Тижні | Лаба | Тижні | Лаба |
-|---|---|---|---|
-| 1–2 | Lab 1 | 9–10 | Lab 5 |
-| 3–4 | Lab 2 | 11–12 | Lab 6 |
-| 5–6 | Lab 3 | 13–14 | Lab 7 |
-| 7–8 | Lab 4 | 15–16 | Lab 8 + показ |
-
-Тексти лаб — англійською. Notes — українською, їх зручно ганяти на парі. Поруч лежить [англійська версія цього файлу](README.md).
 
 ---
 
@@ -185,7 +174,7 @@ flowchart LR
 - **K&R, *The C Programming Language*** — коротко. Розділи 1–5 перетинаються з Labs 1–5.
 - **[Crafting Interpreters](https://craftinginterpreters.com/)** — сканер і токени (Lab 8). Lox збирати не треба — нам важливий сам підхід.
 - **[CS:APP](https://csapp.cs.cmu.edu/)** — біти, пам’ять, машинний код, коли захочеться глибше на Labs 2–3.
-- **Crash Course Computer Science** — двійкова система, регістри, машинний код за десять хвилин.
+- **[Crash Course Computer Science](https://www.youtube.com/playlist?list=PL8dPuuaLjXtNlUrzyH5r6jN9ulIgZBpdo)** — двійкова система, регістри, машинний код за десять хвилин.
 
 ---
 
