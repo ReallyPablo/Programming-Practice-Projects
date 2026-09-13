@@ -21,9 +21,9 @@ loop:  LOAD  A, [count]
 done:  HALT
 ```
 
-You will implement `JMP` (always) and `JZ`/`JNZ` (if Z is set / not set — Lab 2's flags finally do work). Then you will write a **linear search**: given a byte `P` and a region of memory, find the first index where `mem[i] == P`, or report miss. That is the classic "practical" on sequences, except the sequence is *your machine's RAM* and the loop is one you both wrote in C++ (`step` is a loop) and encoded as guest instructions.
+You will implement `JMP` (always) and `JZ`/`JNZ` (if Z is set / not set — Lab 2's flags finally do work). Then you will write a **linear search**: given a byte `P` and a region of memory, find the first index where `mem[i] == P`, or report miss. The sequence is `ember`'s RAM. The loop exists twice: in C++ (`step` is a loop) and as guest instructions.
 
-Scope is the other half. A name lives in a `{ }` block. The same identifier in an inner block **shadows** the outer one ("membrane effect" in older notes). `static` local variables survive across calls; ordinary locals die when the block ends. Print both with `std::cout` in the notes snippet; then stop using `static` as a party trick.
+Scope is the other half. A name lives in a `{ }` block. The same identifier in an inner block **shadows** the outer one. `static` local variables survive across calls; ordinary locals die when the block ends. Print both with `std::cout` in the notes snippet; then stop using `static` as a party trick.
 
 ---
 
@@ -77,7 +77,7 @@ int x = 1;
 // outer x is still 1; inner x is gone; c still exists but the *name* c is gone
 ```
 
-**Lifetime:** automatic (`auto`, the default) storage dies at the end of the block. **`static` local** is initialized once and lives until the program ends — the name is still scoped. **Heap** waits until Lab 6. The "membrane" is just shadowing. The global `::x` (unary `::`) reaches a global when an inner name hid it; you almost never need this if you don't use globals. Don't use globals. Pass a `CPU&`.
+**Lifetime:** automatic (`auto`, the default) storage dies at the end of the block. **`static` local** is initialized once and lives until the program ends — the name is still scoped. **Heap** waits until Lab 6. Shadowing is just an inner name hiding an outer one. The global `::x` (unary `::`) reaches a global when an inner name hid it; you almost never need this if you don't use globals. Don't use globals. Pass a `CPU&`.
 
 ### Prove it to yourself (notes §§1–4)
 
@@ -85,7 +85,7 @@ int x = 1;
 2. `true && (std::cout << "A", false) && (std::cout << "B");` — what prints? (comma operator, or two `if`s: `f() && g()` with prints inside.)
 3. `switch` without `break` on `n = 1` with `case 1: print 1; case 2: print 2;`
 4. Nested `for` that prints a 3×3 grid of `(i,j)`.
-5. The shadowing snippet in §4, with prints; add the `for` + `static`/`auto` counter from older coursework and explain `c` vs the automatic.
+5. The shadowing snippet in §4, with prints; add a `for` that uses both a `static` counter and an ordinary local, and explain which one persists.
 
 ---
 

@@ -10,7 +10,7 @@
 
 One byte is a cell. **Many bytes of the same type, packed next to each other,** are an array. The CPU already had this — `ember`'s memory *is* `Byte data[4096]`. This week you start *using* that fact as a programmer: index, nest two indices into a grid, stop at `'\0'`, swap two cells until a slice is sorted.
 
-The reason it is exciting instead of "fill a matrix from variant 12" is the **display**. 64×32 pixels is a `bool` (or a bit — Lab 2) per cell. `pixel(x, y)` is `pixels[y * 64 + x]`. `PLOT` sets a bit. `cls` plus a loop draws a rectangle. A bouncing pixel is a nested-loop-free animation you `run`. Suddenly 2D indexing is a game, and a row of memory you sort is a bar chart if you plot `mem[i]` as a column height.
+What makes the array visible is the **display**. 64×32 pixels is a `bool` (or a bit — Lab 2) per cell. `pixel(x, y)` is `pixels[y * 64 + x]`. `PLOT` sets a bit. `cls` plus a loop draws a rectangle. A bouncing pixel is a nested-loop-free animation you `run`. Suddenly 2D indexing is a game, and a row of memory you sort is a bar chart if you plot `mem[i]` as a column height.
 
 Strings are arrays of `char` that agree to end at `0`. You already poked `"AB"` in Lab 1. Now `OUTS addr` prints until `'\0'` or a max length — and you will not walk off the box doing it.
 
@@ -39,7 +39,7 @@ index = row * NCOLS + col
 
 For the display: `index = y * WIDTH + x`. Row-major (C/C++) means **cells of a row sit together**. Nested loops: outer `y`, inner `x` walks memory sequentially — faster, and matches how you dump a framebuffer.
 
-"Matrices" in older practicals (min of a row, swap diagonals) are this formula plus a loop. If you want that practice, implement `min_row(y)` over the display or over a region of `ember` memory. The screen is the matrix.
+If you want more practice with that formula, implement `min_row(y)` over the display or over a region of `ember` memory.
 
 ### 3. Strings: length by convention
 
@@ -122,7 +122,7 @@ A poked program that plots three pixels and `HALT`s. `run` then `show`.
 
 ## Stretch
 
-Bit-pack the framebuffer if you didn't. Animate a bouncing pixel (`run` in a host loop that `show`s every N steps — a poor man's game loop). Visualize sort as bars. Optional: treat the display as the "matrix practical" — command `rowmin <y>` prints the leftmost lit pixel in that row.
+Bit-pack the framebuffer if you didn't. Animate a bouncing pixel (`run` in a host loop that `show`s every N steps — a poor man's game loop). Visualize sort as bars. Optional: `rowmin <y>` prints the leftmost lit pixel in that row.
 
 ---
 

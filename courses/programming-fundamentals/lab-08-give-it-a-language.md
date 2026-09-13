@@ -4,7 +4,7 @@
 
 **Weeks:** 15–16 · **Language focus:** tokens, scanning, linked lists, ADTs, syntax errors, the path from text to bytes · **Project step:** a lexer + assembler; `hello`, `search`, `fib`, `bounce` as `.asm` · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 07](lab-07-call-and-return.md) · **Notes:** [theory + experiments](lab-08-give-it-a-language.notes.md)
 
-This lab **is** the old "RGR." The skill was always: recognize strings of a language, or report an error. The language is no longer `$` + hex + `:`. It is **yours**.
+This lab's skill: recognize strings of a language, or report an error — with a line number. The language is the assembler you write for `ember`.
 
 ---
 
@@ -55,7 +55,7 @@ while not eof:
     else error("unexpected char", c, line)
 ```
 
-`ident()` **consumes** while the char is in the ident class, then emits. That consumption is the "scanner that recognizes a chain." A bad chain (`0xGG`, `@foo` if `@` is illegal) is the other half of the RGR: **report error**.
+`ident()` **consumes** while the char is in the ident class, then emits. A bad chain (`0xGG`, `@foo` if `@` is illegal) is the other half: **report the error**.
 
 Draw a tiny state machine for `0x` hex if you like; do not deliver a flowchart instead of a lexer.
 
@@ -89,7 +89,7 @@ struct Token {
 Walk: `for (Token* t = head; t; t = t->next)`.  
 Destroy: walk and `delete` (Lab 6). ASan will catch the leak if you forget.
 
-This is the linear linked structure from the old Lab 2.3 / 2.5, with a reason to exist: **the file can be any length.** An array of 1024 tokens is allowed if you cap and document; the *list* is the intended ADT. A **binary tree** (Stretch) appears if you parse `2 + 3 * 4`; not required for a one-mnemonic-per-line assembler.
+A linked list exists because **the file can be any length.** An array of 1024 tokens is allowed if you cap and document; the *list* is the intended ADT. A **binary tree** (Stretch) appears if you parse `2 + 3 * 4`; not required for a one-mnemonic-per-line assembler.
 
 ### 4. From source to `run`
 
@@ -167,13 +167,13 @@ Architecture diagram (source → tokens → bytes → CPU). Opcode table. Callin
 3. Give two strings your lexer *must* reject, and what it prints.
 4. Why a linked list (or why a capped array) for tokens? What is the ADT's interface?
 5. Why two passes? What breaks with one pass and a `JMP` forward?
-6. How is this the same problem as "recognize `$` + hex + `:`"? How is it not?
+6. Why does the CPU not read `.asm` characters directly? What does the lexer add?
 
 ---
 
 ## Stretch
 
-Expression parser (`ADD A, 2+3`) with a **binary tree** AST — the old "nonlinear structure" lab, finally with a job. A `queue` of pending operands. Macro `.define`. A disassembler (`bytes → guess at asm`) for the dump. Read Crafting Interpreters, chapter *Scanning*, and list three things you skipped.
+Expression parser (`ADD A, 2+3`) with a **binary tree** AST. A `queue` of pending operands. Macro `.define`. A disassembler (`bytes → guess at asm`) for the dump. Read Crafting Interpreters, chapter *Scanning*, and list three things you skipped.
 
 ---
 

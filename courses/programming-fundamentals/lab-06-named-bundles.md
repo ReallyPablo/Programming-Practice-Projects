@@ -12,7 +12,7 @@ Registers, flags, `PC`, a pointer to memory — you have been carrying those as 
 
 The other half is **lifetime**. Everything so far was automatic: `CPU cpu{}` dies at the end of `main`. The **heap** (`new` / `delete`, or a bump pointer *inside* ember's 4 KB) is memory that lives until you say so. Forget `delete` and LeakSanitizer nags. `delete` twice and ASan nags. A dangling pointer is a pointer whose heap object is gone.
 
-Older courses called this "named types" and then asked you to compute "percent of first-year students in a dorm" on a fake array of records. You will still have records — **sprites** (or "contacts," or "aircraft," if your theme wants it): `x, y, vx, vy, alive`. You will `PLOT` them each step. That is a sequence of records doing a job, not a table for a variant.
+Records this week are **sprites**: `x, y, vx, vy, alive`. You `PLOT` them each step. A sequence of records doing a job on the screen, not a table of fields to fill in.
 
 ---
 
@@ -83,10 +83,10 @@ Rules: every `new` has one `delete`; every `new[]` has `delete[]`. After `delete
 ### Milestones
 
 **M1 — Refactor to structs + enum.**
-`struct Flags`, `struct CPU`, `enum class Op`. `sizeof(CPU)` in the README. `step` switches on `Op`. No behaviour change — tag `lab-06` will still run Lab 5 programs. This is the "named type" lab's actual job: *name the layout you already had.*
+`struct Flags`, `struct CPU`, `enum class Op`. `sizeof(CPU)` in the README. `step` switches on `Op`. No behaviour change — tag `lab-06` will still run Lab 5 programs. The job: *name the layout you already had.*
 
 **M2 — Sprites (records + array).**
-`struct Sprite { uint8_t x, y; int8_t vx, vy; bool alive; };` and `Sprite sprites[8]` on the host. Command `sprite <i> <x> <y> <vx> <vy>` fills one. Command `tick` updates all alive sprites (bounce off the 64×32 edges) and `show`s. A demo: two sprites bouncing. This *is* the "array of students" practical, with motion.
+`struct Sprite { uint8_t x, y; int8_t vx, vy; bool alive; };` and `Sprite sprites[8]` on the host. Command `sprite <i> <x> <y> <vx> <vy>` fills one. Command `tick` updates all alive sprites (bounce off the 64×32 edges) and `show`s. A demo: two sprites bouncing.
 
 **M3 — Guest heap: a bump allocator.**
 Reserve e.g. `[0x0C00, 0x0FFF)` as heap. `CPU` (or `Memory`) holds `uint16_t heap_ptr` starting at `0x0C00`. Opcode or command `alloc <n>`: if `heap_ptr + n <= HEAP_HI`, return the old pointer and advance; else error. `dump` of that region after two allocs. No `free` required (bump allocators usually don't); mention that in the README.

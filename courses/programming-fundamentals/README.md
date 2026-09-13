@@ -6,7 +6,7 @@
 
 A 16-week, 8-lab course for **first-year** students. You do not need to have programmed before. Across the semester you build **one machine**: a tiny virtual computer. By Lab 8 you write programs *for* it in a language *you* scanned and assembled. A recruiter can clone the repo, run one command, and see the dump, the pixels, and a Fibonacci that lives on a stack you implemented.
 
-The working name of that machine is **`ember`**. It is not a library and not a programming language — it is the program *you* write, named so every lab can point at the same thing. Call your copy whatever you like. Theme it: a flight computer, a game console, a spacecraft bus, a pocket calculator that got out of hand.
+The working name of that machine is **`ember`**. It is not a library and not a programming language — it is the program *you* write, named so every lab can point at the same thing. Call your repo whatever you like. Everyone builds the same machine: memory, registers, a display, an assembler. What differs is the README, extra opcodes if you want them, and the programs you write for it.
 
 ---
 
@@ -63,7 +63,7 @@ flowchart LR
     L7 --> L8[Lab 8<br/>A language<br/><i>lexer, assembler, programs</i>]
 ```
 
-Everyone builds the same *kind* of machine. Your voice is the theme, extra opcodes, the programs you write for it, and the README that tells the story.
+Everyone builds the same machine. What differs is the README, extra opcodes if you want them, and the programs you write for it.
 
 ---
 

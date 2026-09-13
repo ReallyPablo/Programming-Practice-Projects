@@ -38,7 +38,7 @@ You do not need the full x86-64 ABI. You need: **the callee has its own locals**
 | `T& r` | an alias | yes | required object, `CPU&` |
 | `const T&` | an alias, read-only | no | large read-only (later) |
 
-**Return:** `return x;` copies (or moves) a value to the caller. `void` returns nothing — a **procedure** in older vocabulary. Prefer returning a value when there is one result (`Byte alu_add(...)`). Use out-parameters (`bool& carry`) when you must return two things and haven't made a `struct AluResult` yet. Do **not** return through globals.
+**Return:** `return x;` copies (or moves) a value to the caller. `void` returns nothing. Prefer returning a value when there is one result (`Byte alu_add(...)`). Use out-parameters (`bool& carry`) when you must return two things and haven't made a `struct AluResult` yet. Do **not** return through globals.
 
 **Overload** (same name, different parameter types) is resolved at compile time. Fine for `dump(const Memory&)` vs `dump(const CPU&)`. Do not overload as a party trick.
 
@@ -70,7 +70,7 @@ bool push(Stack& s, std::uint16_t v);
 bool pop(Stack& s, std::uint16_t& out);
 ```
 
-`#include "stack.hpp"` copies the promise into each `.cpp`. **One definition** of `push` lives in `stack.cpp`. Circular includes: `#pragma once` and "include what you use." This is Lab 2.5 from the old pack (the `.h` file) without the pretend lists.
+`#include "stack.hpp"` copies the promise into each `.cpp`. **One definition** of `push` lives in `stack.cpp`. Circular includes: `#pragma once` and "include what you use."
 
 ### 5. The stack as an ADT
 
