@@ -100,12 +100,13 @@ Eight curated paths through the program; pick one with the help of [`TRACK_PICKE
 
 ## Semester language courses
 
-Two 16-week courses for 3rd–4th-year students who already program, built on the same philosophy: **one project across eight two-week labs, each lab = one language feature explored properly + one increment of the project.** No syntax drills. By the end you have a deployed portfolio project and can explain the language's internals at a whiteboard.
+16-week courses built on the same philosophy: **one project across eight two-week labs, each lab = one idea explored properly + one increment of the project.** No variant tables, no separate "practical / lab / RGR" tracks. By the end you have a portfolio artifact and can explain the internals at a whiteboard.
 
-| Course | Project | Labs |
-|---|---|---|
-| [**Python**](./courses/python/README.md) | A full-text search engine over a corpus you choose — iterators → inverted index → BM25 ranking → typed/tested/packaged CLI → parallel indexing (the GIL) → async crawler → FastAPI service → NumPy + embeddings. Counts as [Lab 15](./labs/lab-15-mini-search-engine.md). | [8 labs](./courses/python/README.md#the-eight-labs) |
-| [**JavaScript**](./courses/javascript/README.md) | A real-time multiplayer browser game with an authoritative Node server — the event loop → objects, `class`, and `this` → promises and async → Node streams and WebSockets → prediction, reconciliation, and a binary protocol → TypeScript → V8 internals, profiling, and tests → Docker, CI/CD, and a public URL. Counts as [Lab 27](./labs/lab-27-multiplayer-browser-game.md). | [8 labs](./courses/javascript/README.md#the-eight-labs) |
+| Course | Who it's for | Project | Labs |
+|---|---|---|---|
+| [**Programming Fundamentals**](./courses/programming-fundamentals/README.md) | First year — you do not need to have programmed before | A tiny virtual computer (`ember`) — bytes you can dump → bits and an ALU → pointers → jumps and loops → a pixel display → structs and a heap → a call stack and recursion → a lexer and assembler so you write `.asm` instead of hex | [8 labs](./courses/programming-fundamentals/README.md#the-eight-labs) |
+| [**Python**](./courses/python/README.md) | 3rd–4th year who already program | A full-text search engine over a corpus you choose — iterators → inverted index → BM25 ranking → typed/tested/packaged CLI → parallel indexing (the GIL) → async crawler → FastAPI service → NumPy + embeddings. Counts as [Lab 15](./labs/lab-15-mini-search-engine.md). | [8 labs](./courses/python/README.md#the-eight-labs) |
+| [**JavaScript**](./courses/javascript/README.md) | 3rd–4th year who already program | A real-time multiplayer browser game with an authoritative Node server — the event loop → objects, `class`, and `this` → promises and async → Node streams and WebSockets → prediction, reconciliation, and a binary protocol → TypeScript → V8 internals, profiling, and tests → Docker, CI/CD, and a public URL. Counts as [Lab 27](./labs/lab-27-multiplayer-browser-game.md). | [8 labs](./courses/javascript/README.md#the-eight-labs) |
 
 ---
 
@@ -119,6 +120,9 @@ Two 16-week courses for 3rd–4th-year students who already program, built on th
 ├── templates/
 │   └── MANIFESTO_TEMPLATE.md       # the Lab 42 ceremonial document
 ├── courses/
+│   ├── programming-fundamentals/  # 16-week first-year course: 8 labs building a virtual computer
+│   │   ├── README.md
+│   │   └── lab-01 … lab-08
 │   ├── python/                     # 16-week Python course: 8 labs building a search engine
 │   │   ├── README.md
 │   │   └── lab-01 … lab-08
