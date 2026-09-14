@@ -119,6 +119,7 @@ Three pages, one evening, once per semester. Everything after this assumes them.
 | [Інструменти, термінал і git](setup.notes.md) | compiler, CMake and git installed per OS; the ten terminal commands; the git you actually need for tags and a public repo |
 | [C++ за годину](cpp-survival-kit.notes.md) | `cout`, variables, `if`, loops, functions, arrays, strings — exactly enough to read Lab 1's skeleton and write your four `TODO`s |
 | [Помилки, які ви точно побачите](errors.notes.md) | real compiler, linker and sanitizer messages, decoded. Keep it open all semester |
+| [GLOSSARY.md](GLOSSARY.md) | the course's bilingual glossary: Ukrainian as we speak it, English as you search for it |
 | [CHECKS.md](CHECKS.md) + [`checks/`](checks/) | verified numbers your machine must produce, per lab. Run them the day you think you're done — not the day before the defense |
 
 Then copy the [starter skeleton](starter/README.md) and open [Lab 1](lab-01-a-box-of-bytes.md).
@@ -157,15 +158,16 @@ Each lab is **two weeks**. Week 16 is the showcase.
 
 Same shape as the Python and JavaScript courses:
 
-1. **Про що ця лаба** — what you'll master and why it matters beyond this project.
-2. **Notes** — a short companion: theory, paste-ready snippets, expected output. Use it in class or alone; it does not replace the lab.
-3. **Теорія** — the mental model, what's under the hood, pitfalls, *prove-it-to-yourself* experiments. This is the reading.
-4. **Крок проєкту** — what to add to `ember`, with milestones and a definition of done.
-5. **Рівні** — Basic / Standard / Advanced, with honest hour estimates. Pick a landing spot before you start; Basic is a real, passing lab.
-6. **Чекліст здачі** — the deliverable checklist.
-7. **На захисті** — explain it at the whiteboard.
-8. **Якщо встигаєте** — optional, when you're ahead.
-9. **Що почитати й подивитись** — a few talks and chapters, each with one line on *why this one*.
+1. **Терміни цієї лаби** — the 5–8 terms it introduces, Ukrainian and English.
+2. **Про що ця лаба** — what you'll master and why it matters beyond this project.
+3. **Notes** — a short companion: theory, paste-ready snippets, expected output. Use it in class or alone; it does not replace the lab.
+4. **Теорія** — the mental model, what's under the hood, pitfalls, *prove-it-to-yourself* experiments. This is the reading.
+5. **Крок проєкту** — what to add to `ember`, with milestones and a definition of done.
+6. **Рівні** — Basic / Standard / Advanced, with honest hour estimates. Pick a landing spot before you start; Basic is a real, passing lab.
+7. **Чекліст здачі** — the deliverable checklist.
+8. **На захисті** — explain it at the whiteboard.
+9. **Якщо встигаєте** — optional, when you're ahead.
+10. **Що почитати й подивитись** — a few talks and chapters, each with one line on *why this one*.
 
 (The lab files are in Ukrainian. The section names above are the headings you will
 actually see; this list is here so an English reader can navigate them.)
