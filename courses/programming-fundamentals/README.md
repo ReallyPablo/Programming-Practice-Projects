@@ -141,14 +141,14 @@ The machine's reference — memory map, instruction set, calling convention — 
 | 7 | [Call and Return](lab-07-call-and-return.md) | [notes](lab-07-call-and-return.notes.md) | Functions, value vs pointer, the call stack, recursion, headers | `SP`, `PUSH`/`POP`, `Stack` ADT, `CALL`/`RET`, recursive factorial |
 | 8 | [Give It a Language](lab-08-give-it-a-language.md) | [notes](lab-08-give-it-a-language.notes.md) | Tokens, scanners, linked lists, ADTs, syntax errors | A lexer + assembler; `hello`, `search`, `fib` as `.asm` |
 
-Each lab is **two weeks**. Week 16 is the showcase.
+Each lab is **two weeks**, checked at the end of that window. Eight defenses across the semester, not one showcase in week 16.
 
 | Weeks | Lab | Weeks | Lab |
 |---|---|---|---|
 | 1–2 | Lab 1 | 9–10 | Lab 5 |
 | 3–4 | Lab 2 | 11–12 | Lab 6 |
 | 5–6 | Lab 3 | 13–14 | Lab 7 |
-| 7–8 | Lab 4 | 15–16 | Lab 8 + showcase |
+| 7–8 | Lab 4 | 15–16 | Lab 8 |
 
 **The labs and the notes are written in Ukrainian**, because the students are. This README is the English entry point to the repository; the machine reference has both an [English](ISA.md) and a [Ukrainian](ISA.uk.md) version.
 
