@@ -149,7 +149,7 @@ Each lab is **two weeks**. Week 16 is the showcase.
 | 5–6 | Lab 3 | 13–14 | Lab 7 |
 | 7–8 | Lab 4 | 15–16 | Lab 8 + showcase |
 
-Labs are in English; the `.notes.md` files are in Ukrainian (pair work, paste-and-run). This README has a [Ukrainian twin](README.uk.md).
+**The labs and the notes are written in Ukrainian**, because the students are. This README is the English entry point to the repository; the machine reference has both an [English](ISA.md) and a [Ukrainian](ISA.uk.md) version.
 
 ---
 
@@ -157,15 +157,18 @@ Labs are in English; the `.notes.md` files are in Ukrainian (pair work, paste-an
 
 Same shape as the Python and JavaScript courses:
 
-1. **This lab's feature** — what you'll master and why it matters beyond this project.
+1. **Про що ця лаба** — what you'll master and why it matters beyond this project.
 2. **Notes** — a short companion: theory, paste-ready snippets, expected output. Use it in class or alone; it does not replace the lab.
-3. **Theory** — the mental model, what's under the hood, pitfalls, *prove-it-to-yourself* experiments. This is the reading.
-4. **Project step** — what to add to `ember`, with milestones and a definition of done.
-5. **Levels** — Basic / Standard / Advanced, with honest hour estimates. Pick a landing spot before you start; Basic is a real, passing lab.
-6. **Deliverable checklist**
-7. **Reflection** — explain it at the whiteboard.
-8. **Stretch** — optional, when you're ahead.
-9. **Resources** — a few talks and chapters, each with one line on *why this one*.
+3. **Теорія** — the mental model, what's under the hood, pitfalls, *prove-it-to-yourself* experiments. This is the reading.
+4. **Крок проєкту** — what to add to `ember`, with milestones and a definition of done.
+5. **Рівні** — Basic / Standard / Advanced, with honest hour estimates. Pick a landing spot before you start; Basic is a real, passing lab.
+6. **Чекліст здачі** — the deliverable checklist.
+7. **На захисті** — explain it at the whiteboard.
+8. **Якщо встигаєте** — optional, when you're ahead.
+9. **Що почитати й подивитись** — a few talks and chapters, each with one line on *why this one*.
+
+(The lab files are in Ukrainian. The section names above are the headings you will
+actually see; this list is here so an English reader can navigate them.)
 
 ### A note on Levels, because the cohort is not uniform
 

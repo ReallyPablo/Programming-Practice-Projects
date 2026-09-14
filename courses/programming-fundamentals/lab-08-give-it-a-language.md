@@ -1,16 +1,16 @@
-# Lab 08 — Give It a Language: Lexer, Lists, and Programs You Can Read
+# Лаба 08 — Дайте їй мову: лексер, списки й програми, які можна читати
 
-> "A scanner is a program that looks at a string and says what it is — or that it isn't anything."
+> «Сканер — це програма, яка дивиться на рядок і каже, що це таке. Або що це не таке нічого.»
 
-**Weeks:** 15–16 · **Language focus:** tokens, scanning, linked lists, ADTs, syntax errors, the path from text to bytes · **Project step:** a lexer + assembler; `hello`, `search`, `fib` as `.asm` · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 07](lab-07-call-and-return.md) · **Notes:** [theory + experiments](lab-08-give-it-a-language.notes.md)
+**Тижні:** 15–16 · **Про мову:** токени, сканування, зв'язні списки, абстрактні типи даних, синтаксичні помилки, шлях від тексту до байтів · **Крок проєкту:** лексер і асемблер; `hello`, `search`, `fib` у вигляді `.asm` · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Попередня:** [Лаба 07](lab-07-call-and-return.md) · **Notes:** [теорія і досліди](lab-08-give-it-a-language.notes.md)
 
-This lab's skill: recognize strings of a language, or report an error — with a line number. The language is the assembler you write for `ember`.
+Навичка цієї лаби: розпізнати рядок мови або повідомити про помилку — з номером рядка. Мова тут — це асемблер, який ви пишете для `ember`.
 
 ---
 
-## This lab's feature
+## Про що ця лаба
 
-Poking `set 0 0x10` was honest. It does not scale. Humans write **text**:
+Класти байти через `set 0 0x10` було чесно. Але так не масштабується. Люди пишуть **текст**:
 
 ```txt
 ; hello.asm
@@ -19,49 +19,49 @@ OUT
 HALT
 ```
 
-A **lexer** (scanner) walks characters and emits **tokens**: `Ident(LOADI)`, `Ident(A)`, `Comma`, `Number(65)`, `Newline`, `Ident(OUT)`, … Illegal characters, a number like `0xGG`, a string that never ends — **errors**, with a line number. That is L(V) in the only sense that matters: a grammar you can point at, and a program that accepts or rejects.
+**Лексер** (сканер) іде по символах і видає **токени**: `Ident(LOADI)`, `Ident(A)`, `Comma`, `Number(65)`, `Newline`, `Ident(OUT)`… Недозволений символ, число на кшталт `0xGG`, рядок, який ніколи не закінчується, — це **помилки**, і кожна з номером рядка. Оце й є «розпізнавання мови» в єдиному сенсі, який має значення: граматика, на яку можна показати пальцем, і програма, яка приймає або відхиляє.
 
-An **assembler** turns tokens into the bytes `step` already understands, resolving labels (`loop:` → address). A **linked list** of tokens (or of labels) is the data structure: you do not know the length up front; you grow node by node. The list is an ADT (`push_back`, `walk`, `destroy`). Trees are the Stretch (an expression AST); you do not need a full compiler.
+**Асемблер** перетворює токени на байти, які `step` і так уже розуміє, і дорогою розв'язує мітки (`loop:` перетворюється на адресу). **Зв'язний список** токенів (або міток) — це структура даних, яка тут потрібна: довжина наперед невідома, тож ви ростете вузол за вузлом. Список — це абстрактний тип із трьома операціями (`push_back`, обхід, `destroy`). Дерева лишаються в Stretch (дерево розбору виразів); повноцінний компілятор вам не потрібен.
 
-And then you cash it in. [Lab 7](lab-07-call-and-return.md) gave you `CALL`, `RET` and a stack. Recursive Fibonacci on this machine is 22 lines of source and 35 bytes — but it contains five addresses (`fib` three times, `ret_a` twice), and **inserting a single instruction moves every address below it**. By hand that is bookkeeping; with an assembler the labels resolve themselves and you think about the algorithm instead. **That is the argument for this whole lab**, and you should be able to make it at the defense: a language is not decoration, it is what makes the next program affordable.
+А далі ви отримуєте дивіденди. [Лаба 7](lab-07-call-and-return.md) дала вам `CALL`, `RET` і стек. Рекурсивний Фібоначчі на цій машині — це 22 рядки тексту й 35 байтів, але в них сидять п'ять адрес (`fib` тричі, `ret_a` двічі), і **варто вставити одну інструкцію, як усі адреси нижче поїдуть**. Руками це бухгалтерія; з асемблером мітки рахуються самі, а ви думаєте про алгоритм. **Оце й є аргумент на користь усієї цієї лаби**, і ви маєте вміти його проговорити на захисті: мова — не прикраса, мова робить наступну програму дешевою.
 
-By the showcase, `ember programs/fib.asm` loads, assembles, runs, and prints `8`. A stranger can read the `.asm`. That is a computer with a language.
+До показу робіт `ember programs/fib.asm` завантажує, збирає, виконує і друкує `8`. А `.asm` може прочитати стороння людина. Оце й називається «комп'ютер із мовою».
 
 ---
 
-## Theory
+## Теорія
 
-### 1. Characters are not tokens
+### 1. Символи — це ще не токени
 
-The lexer has a cursor (`i` into a `char[]` or `std::string_view` of the file). It skips spaces and comments (`;` to end of line). Then it **classifies the next lexeme**:
+У лексера є курсор (`i` у `char[]` або у `std::string_view` з текстом файлу). Він пропускає пробіли й коментарі (`;` до кінця рядка). Далі він **класифікує наступну лексему**:
 
-| Kind | Shape (informal) | Example |
+| Вид | Форма (неформально) | Приклад |
 |---|---|---|
-| Ident | letter, then letter/digit/`_` | `LOADI`, `loop`, `A` |
-| Number | `0x` hex, `0b` bin, or decimal | `65`, `0x41`, `0b01000001` |
-| Punct | `: ,` | label colon, comma |
-| Newline | `\n` | line is a statement |
-| Eof | end of file | |
+| Ident | літера, далі літери/цифри/`_` | `LOADI`, `loop`, `A` |
+| Number | `0x` hex, `0b` bin або десяткове | `65`, `0x41`, `0b01000001` |
+| Punct | `: ,` | двокрапка мітки, кома |
+| Newline | `\n` | рядок — це одна інструкція |
+| Eof | кінець файлу | |
 
-Pseudocode of the loop you will write:
+Псевдокод циклу, який ви напишете:
 
 ```txt
-while not eof:
-    skip spaces and comments
-    if eof: emit Eof; break
+поки не кінець файлу:
+    пропустити пробіли й коментарі
+    якщо кінець файлу: видати Eof; вийти
     c = peek()
-    if c is letter: ident()
-    else if c is digit or c == '0' && peek(1) in 'xb': number()
-    else if c in ':,': punct()
-    else if c == '\n': newline()
-    else error("unexpected char", c, line)
+    якщо c літера: ident()
+    інакше якщо c цифра або c == '0' і peek(1) це 'x' чи 'b': number()
+    інакше якщо c це ':' або ',': punct()
+    інакше якщо c це '\n': newline()
+    інакше error("несподіваний символ", c, рядок)
 ```
 
-`ident()` **consumes** while the char is in the ident class, then emits. A bad chain (`0xGG`, `@foo` if `@` is illegal) is the other half: **report the error**.
+`ident()` **з'їдає** символи, поки вони належать до класу ідентифікатора, а потім видає токен. Зіпсований ланцюжок (`0xGG`, або `@foo`, якщо `@` у вас недозволений) — це друга половина роботи: **повідомити про помилку**.
 
-Draw a tiny state machine for `0x` hex if you like; do not deliver a flowchart instead of a lexer.
+Намалюйте маленький автомат для `0x`, якщо хочеться, але не здавайте блок-схему замість лексера.
 
-### 2. A grammar small enough to finish
+### 2. Граматика, достатньо маленька, щоб її дописати
 
 ```txt
 program      := { line }
@@ -69,188 +69,181 @@ line         := [ ident ':' ] [ instruction ] [ comment ] newline
 instruction  := mnemonic { operand }
 operand      := register | number | ident | '[' (number | 'H') ']'
 register     := 'A' | 'B' | 'H'
-mnemonic     := any mnemonic in ISA.md
+mnemonic     := будь-яка мнемоніка з ISA.uk.md
 ```
 
-The mnemonics and their operand shapes are not yours to invent: they are the
-table in [ISA.md §5](ISA.md#5-the-instruction-set). Read the instruction sizes
-from the same table your `step()` reads them from — a literal shared constant if
-you can manage it, because the day they drift apart is the day your assembler
-emits a program that runs and quietly does something else.
+Мнемоніки й форми їхніх операндів не вигадуються: вони в таблиці
+[ISA.uk.md §5](ISA.uk.md#5-набір-інструкцій). Розміри інструкцій читайте з тієї
+самої таблиці, з якої їх читає ваш `step()` — найкраще спільною константою в
+коді, бо в той день, коли вони розійдуться, ваш асемблер видасть програму, яка
+запуститься й тихенько робитиме щось інше.
 
-Assembler pass 1: lex, then walk tokens, record labels → addresses, adding each
-instruction's size as you go. Pass 2: emit bytes, filling in label operands.
-Unknown mnemonic, missing comma, `JMP` without a target — errors. Do not recover
-brilliantly; **fail clearly**.
+Перший прохід асемблера: пролексувати, потім пройтись токенами й записати, якій
+адресі відповідає кожна мітка, додаючи дорогою розмір кожної інструкції. Другий
+прохід: видати байти, підставивши адреси в операнди міток. Невідома мнемоніка,
+забута кома, `JMP` без цілі — помилки. Не треба геніально відновлюватись:
+**падайте зрозуміло**.
 
-### 3. Linked lists: when length is discovered, not declared
+### 3. Зв'язні списки: коли довжину не оголошують, а з'ясовують
 
-A **working** `Token` node with `append`, walk and `destroy` is written out in full in [Notes 08 §3](lab-08-give-it-a-language.notes.md#3-список-бо-довжина-невідома). Treat it as given: copy it, compile it, understand it. Your work is the scanner that produces the tokens and the two passes that consume them — not re-deriving a linked list from scratch under deadline.
+**Робочий** вузол `Token` разом із `append`, обходом і `destroy` повністю виписаний у [Notes 08 §3](lab-08-give-it-a-language.notes.md#3-список-бо-довжина-невідома). Вважайте, що його вам **дано**: скопіюйте, зберіть, розберіться. Ваша робота — сканер, який видає токени, і два проходи, які їх споживають, а не виведення зв'язного списку з нуля під дедлайн.
 
 ```cpp
 struct Token {
     enum class Kind { Ident, Number, Comma, Colon, Newline, Eof, /* ... */ };
     Kind kind;
-    std::string text;      // or a slice (ptr+len) into the source
+    std::string text;      // або зріз (вказівник + довжина) у вихідний текст
     int line;
-    Token* next;           // nullptr at the end
+    Token* next;           // nullptr у кінці
 };
 ```
 
-`Token* head = nullptr; Token* tail = nullptr;`  
-`append`: `new Token{...}`; if empty, `head = tail = t`; else `tail->next = t; tail = t`.  
-Walk: `for (Token* t = head; t; t = t->next)`.  
-Destroy: walk and `delete` (Lab 6). ASan will catch the leak if you forget.
+`Token* head = nullptr; Token* tail = nullptr;`
+`append`: `new Token{...}`; якщо список порожній — `head = tail = t`, інакше `tail->next = t; tail = t`.
+Обхід: `for (Token* t = head; t; t = t->next)`.
+Звільнення: пройтись і робити `delete` (Lab 6). Якщо забудете, ASan спіймає витік.
 
-A linked list exists because **the file can be any length.** An array of 1024 tokens is allowed if you cap and document; the *list* is the intended ADT. A **binary tree** (Stretch) appears if you parse `2 + 3 * 4`; not required for a one-mnemonic-per-line assembler.
+Зв'язний список існує тому, що **файл може бути якої завгодно довжини**. Масив на 1024 токени теж дозволений, якщо є стеля й повідомлення про її досягнення; але задуманий тут саме **список**. **Двійкове дерево** (Stretch) з'являється, коли ви розбираєте `2 + 3 * 4`; для асемблера з однією інструкцією на рядок воно не потрібне.
 
-### 4. From source to `run`
+### 4. Від тексту до `run`
 
 ```txt
-.asm file → lexer → Token list → assembler → bytes in Memory → CPU.run
+файл .asm → лексер → список токенів → асемблер → байти в Memory → CPU.run
 ```
 
-CLI: `./ember programs/hello.asm` (assemble + run) and `./ember` still drops into the poke REPL for debugging. Keep both.
+Командний рядок: `./ember programs/hello.asm` збирає й виконує, а просто `./ember` як і раніше відкриває REPL для колупання байтів. Лишіть обидва.
 
-### Prove it to yourself (notes §§1–3)
+### Перевірте самі (notes §§1–3)
 
-1. Hand-lex `ADD A, B\n` into a token table (kind, text).
-2. Hand-lex `LOADI A, 0xGG` and mark the error.
-3. On paper, append three nodes to an empty list; then walk.
-4. `new Token` in a loop of 3 without `delete` — LSan; then free the list.
-5. Two-pass: `JMP done` / `NOP` / `done: HALT` — what address is `done`?
+1. Розберіть руками `ADD A, B\n` у таблицю токенів (вид, текст).
+2. Розберіть руками `LOADI A, 0xGG` і позначте, де помилка.
+3. На папері додайте три вузли до порожнього списку, потім пройдіться ним.
+4. `new Token` у циклі на три ітерації без `delete` — подивіться на LSan; потім звільніть список.
+5. Два проходи: `JMP done` / `NOP` / `done: HALT` — яка адреса в `done`?
 
 ---
 
-## Project step: a language, four programs, a showcase
+## Крок проєкту: мова, три програми й показ робіт
 
-### Layout
+### Розкладка
 
 ```txt
 src/asm/
-  token.hpp      # Kind, Token node
-  lexer.hpp/cpp  # lex(source) -> Token* head or error
+  token.hpp      # Kind, вузол Token
+  lexer.hpp/cpp  # lex(source) -> Token* head або помилка
   assembler.hpp/cpp
 programs/
-  hello.asm      # OUT a character or OUTS a string
-  search.asm     # linear search (Lab 4) as readable source
-  fib.asm        # recursive fib -- the payoff for Lab 7's CALL/RET
-  bounce.asm     # PLOT a moving pixel (Advanced)
+  hello.asm      # OUT символу або OUTS рядка
+  search.asm     # лінійний пошук із Lab 4, який можна читати
+  fib.asm        # рекурсивний fib — дивіденди з CALL/RET у Lab 7
+  bounce.asm     # PLOT пікселя, що рухається (Advanced)
 ```
 
-### Milestones
+### Етапи
 
-**M1 — Lexer.**
-Feed a string, get a list of tokens. Reject illegal characters and bad numbers with `line`. Command `lex programs/hello.asm` prints tokens one per line. Paste that output.
+**M1 — лексер.**
+На вхід рядок, на виході список токенів. Недозволені символи й зіпсовані числа відхиляються з номером рядка. Команда `lex programs/hello.asm` друкує по токену на рядок. Цей вивід вставте в README.
 
-**M2 — Assembler.**
-Labels, the mnemonics from [ISA.md](ISA.md), numbers in dec/hex/bin. `asm programs/hello.asm` dumps the bytes, or loads them at `0x000`. Round-trip check: assembled `HALT` is the byte `0x00`, and `JMP 0x0123` is `30 23 01` — opcode, then the address little-endian.
+**M2 — асемблер.**
+Мітки, мнемоніки з [ISA.uk.md](ISA.uk.md), числа в десятковій, шістнадцятковій і двійковій. `asm programs/hello.asm` виводить байти або завантажує їх на `0x000`. Перевірка на повний оберт: зібраний `HALT` — це байт `0x00`, а `JMP 0x0123` — це `30 23 01`, тобто опкод і адреса молодшим байтом уперед.
 
-**M3 — Three programs, then a fourth if you have time.**
+**M3 — три програми, і четверта, якщо лишиться час.**
 
-- `hello.asm` — `OUTS` a string you assembled into the data region.
-- `search.asm` — Lab 4's linear search, but now *readable*: `loop:`, `found:`, real names. Put it next to the hand-poked hex from Lab 4 in the README. That diff is the lab's whole argument.
-- `fib.asm` — **recursive** Fibonacci, using the `CALL`/`RET` and the calling convention from [Lab 7](lab-07-call-and-return.md) and [ISA.md §6](ISA.md#calling-convention). `fib(6)` prints `8`; check a couple more against a calculator (`fib(10)` is `55`).
-- `bounce.asm` — a pixel that moves across the display over several frames. This one is **Advanced**, not required: take it if `fib` came out clean and you have a week left.
+- `hello.asm` — `OUTS` рядка, який ви ж і зібрали в регіон даних.
+- `search.asm` — лінійний пошук із Lab 4, але тепер *читабельний*: `loop:`, `found:`, справжні імена. Покладіть його в README поруч із шістнадцятковим, який набивали руками в Lab 4. Оця різниця і є весь аргумент лаби.
+- `fib.asm` — **рекурсивний** Фібоначчі, на `CALL`/`RET` і конвенції виклику з [Лаби 7](lab-07-call-and-return.md) та [ISA.uk.md §6](ISA.uk.md#конвенція-виклику). `fib(6)` друкує `8`; перевірте ще пару значень калькулятором (`fib(10)` це `55`).
+- `bounce.asm` — піксель, який їде екраном упродовж кількох кадрів. Ця програма **Advanced**, не обов'язкова: беріть її, якщо `fib` вийшов чисто й лишився тиждень.
 
-If `fib` misbehaves, it is almost always the convention: something clobbered `B` or `H` across a `CALL`. Add a `stack` command to the REPL and step it.
+Якщо `fib` поводиться дивно, майже завжди винна конвенція: щось затерло `B` або `H` через `CALL`. Додайте в REPL команду `stack` і пройдіться покроково.
 
-**M4 — README as the product.**
-This is the file a stranger opens. It should stand alone:
+**M4 — README як продукт.**
+Це файл, який відкриє стороння людина. Він має бути самодостатнім:
 
-- An architecture diagram: source → tokens → bytes → CPU → screen.
-- The [memory map](ISA.md#2-memory-map) and the instructions you implemented, including your own extensions in the same format.
-- The calling convention.
-- Build and run in three commands.
-- Pasted output: `./build/ember programs/fib.asm`, a `dump`, and a frame of `show`. (A GIF of the terminal is nice, not required.)
-- Known limits, stated plainly: no macros, no expressions in operands, one instruction per line.
-- One honest paragraph: what surprised you across the eight labs.
+- Схема архітектури: текст → токени → байти → процесор → екран.
+- [Карта пам'яті](ISA.uk.md#2-карта-памяті) і реалізовані інструкції, разом із вашими власними розширеннями в тому самому форматі.
+- Конвенція виклику.
+- Збірка й запуск у три команди.
+- Вставлений вивід: `./build/ember programs/fib.asm`, один `dump` і кадр `show`. (GIF термінала — приємно, але не обов'язково.)
+- Чесно названі обмеження: без макросів, без виразів в операндах, одна інструкція на рядок.
+- Один чесний абзац: що вас здивувало за вісім лаб.
 
-Tag `v1.0.0` as well as `lab-08`.
+Крім тега `lab-08` поставте ще `v1.0.0`.
 
-### Definition of done
+### Коли вважати готовим
 
-- Lexer emits tokens or a line-numbered error; linked list freed.
-- Assembler supports labels, and every mnemonic the programs use, with sizes from [ISA.md](ISA.md).
-- `hello.asm`, `search.asm`, `fib.asm` in `programs/`; `fib(6)` prints `8`.
-- `./ember path.asm` assemble-and-run; the Lab 1 REPL still there for debugging bytes.
-- README a stranger can follow; tags `lab-08` and `v1.0.0`.
-
----
-
-## Levels
-
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
-
-### Basic — "it reads text" (~9–11 hours)
-- A lexer: characters in, tokens out, comments and whitespace skipped. The token node and list from [Notes 08 §3](lab-08-give-it-a-language.notes.md) are given — use them.
-- Illegal characters and malformed numbers are rejected **with a line number**, not silently taken as 0.
-- `lex programs/hello.asm` prints one token per line; that output is pasted in the README.
-- `hello.asm` assembles and runs: `./ember programs/hello.asm` prints something you can read.
-- Repo tagged `lab-08`.
-
-### Standard — target (~15–17 hours)
-- Everything in **Definition of done** above.
-- Two-pass assembler with labels; every mnemonic your programs use, with sizes from [ISA.md](ISA.md).
-- `search.asm` runs, and sits in the README next to the hex you poked in Lab 4.
-- `fib.asm` runs: recursive Fibonacci, `fib(6)` prints `8`, `fib(10)` prints `55`.
-- Token list nodes freed; the happy path sanitizer-clean.
-- README a stranger can follow: diagram, memory map, instruction table, build in three commands, pasted output.
-- Tags `lab-08` and `v1.0.0`.
-
-### Advanced — distinction (~21–23 hours)
-- Everything above, plus `bounce.asm`: a pixel that moves across the display over several frames.
-- A disassembler: bytes back to a listing, diffed against the source you assembled.
-- An expression parser with a binary-tree AST, or `.define` macros.
+- Лексер видає токени або помилку з номером рядка; зв'язний список звільняється.
+- Асемблер підтримує мітки й усі мнемоніки, які вживають ваші програми, з розмірами з [ISA.uk.md](ISA.uk.md).
+- `hello.asm`, `search.asm`, `fib.asm` лежать у `programs/`; `fib(6)` друкує `8`.
+- `./ember шлях.asm` збирає й виконує; REPL із першої лаби лишається на місці для колупання байтів.
+- README, за яким може піти стороння людина; теги `lab-08` і `v1.0.0`.
 
 ---
 
-## Deliverable checklist
+## Рівні
 
-- [ ] `lexer` + token list ADT; errors have line numbers.
-- [ ] Two-pass assembler; labels work; sizes come from [ISA.md](ISA.md).
-- [ ] `hello`, `search`, `fib` as `.asm`; `ember file.asm` runs; `fib(6)` is `8`.
-- [ ] List nodes `delete`d; ASan/LSan clean on the happy path.
-- [ ] README: diagram, opcodes, build, pasted terminal output.
-- [ ] Git tags `lab-08` and `v1.0.0`.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
 
----
+### Basic — «воно читає текст» (~9–11 годин)
+- Лексер: на вході символи, на виході токени, коментарі й пробіли пропущені. Вузол токена й список із [Notes 08 §3](lab-08-give-it-a-language.notes.md) дано — беріть їх.
+- Недозволені символи й зіпсовані числа відхиляються **з номером рядка**, а не тихо перетворюються на нуль.
+- `lex programs/hello.asm` друкує по токену на рядок; цей вивід вставлений у README.
+- `hello.asm` збирається й виконується: `./ember programs/hello.asm` друкує щось, що можна прочитати.
+- Тег `lab-08`.
 
-## Reflection — explain it at the whiteboard
+### Standard — цільовий (~15–17 годин)
+- Усе з розділу **Коли вважати готовим**.
+- Двопрохідний асемблер із мітками; усі мнемоніки, які вживають ваші програми, з розмірами з [ISA.uk.md](ISA.uk.md).
+- `search.asm` працює й лежить у README поруч із шістнадцятковим, який ви набивали в Lab 4.
+- `fib.asm` працює: рекурсивний Фібоначчі, `fib(6)` друкує `8`, `fib(10)` друкує `55`.
+- Вузли списку токенів звільнені; на успішному шляху санітайзери мовчать.
+- README, за яким може піти стороння людина: схема, карта пам'яті, таблиця інструкцій, збірка в три команди, вставлений вивід.
+- Теги `lab-08` і `v1.0.0`.
 
-1. What is a token? Why not `step` on raw source characters?
-2. Show the scan of `LOADI A, 0x41`. Where does the cursor sit after the number?
-3. Give two strings your lexer *must* reject, and what it prints.
-4. Why a linked list (or why a capped array) for tokens? What is the ADT's interface?
-5. Why two passes? What breaks with one pass and a `JMP` forward?
-6. Why does the CPU not read `.asm` characters directly? What does the lexer add?
-7. Show `search.asm` next to the hex you poked in Lab 4. What did the assembler buy you, in one sentence?
-8. What would break first if your assembler's size table and `step()`'s disagreed by one byte?
-
----
-
-## Stretch
-
-`bounce.asm`, if you left it out of M3.
-
-A **disassembler**: bytes back to a readable listing. Run it on a program you just assembled and diff the result against the source — a round trip that finds size bugs nothing else will.
-
-An expression parser (`ADD A, 2+3`) with a **binary tree** AST. A `queue` of pending operands. Macro `.define`. Read Crafting Interpreters, chapter *Scanning*, and list three things you skipped.
+### Advanced — відмінно (~21–23 години)
+- Усе вище плюс `bounce.asm`: піксель, який їде екраном упродовж кількох кадрів.
+- Дизасемблер: з байтів назад у лістинг, звірений із текстом, який ви зібрали.
+- Розбір виразів із двійковим деревом або макроси `.define`.
 
 ---
 
-## Resources
+## Чекліст здачі
 
-**Watch**
+- [ ] Лексер і список токенів як абстрактний тип; у помилок є номери рядків.
+- [ ] Двопрохідний асемблер; мітки працюють; розміри беруться з [ISA.uk.md](ISA.uk.md).
+- [ ] `hello`, `search`, `fib` у вигляді `.asm`; `ember файл.asm` запускається; `fib(6)` дає `8`.
+- [ ] Вузли списку звільнені через `delete`; на успішному шляху ASan/LSan чисті.
+- [ ] README: схема, інструкції, збірка, вставлений вивід термінала.
+- [ ] Теги `lab-08` і `v1.0.0`.
 
-- [Crafting Interpreters — Scanning? (talks by Nystrom, or just read)](https://craftinginterpreters.com/scanning.html) — **read this**. It is the lab.
+---
 
-**Read**
+## На захисті — поясніть біля дошки
 
-- Nystrom — [Scanning](https://craftinginterpreters.com/scanning.html) and [A bytecode VM](https://craftinginterpreters.com/a-virtual-machine.html) (you already have the VM; steal vocabulary).
-- Wikipedia — [Lexical analysis](https://en.wikipedia.org/wiki/Lexical_analysis), [Linked list](https://en.wikipedia.org/wiki/Linked_list).
-- Your own Lab 2 opcode table — the assembler's target. If the table and the lexer disagree, the table wins; fix the lexer.
+1. Що таке токен? Чому не можна робити `step` просто по символах тексту?
+2. Покажіть сканування `LOADI A, 0x41`. Де стоїть курсор після числа?
+3. Наведіть два рядки, які ваш лексер **мусить** відхилити, і що він при цьому друкує.
+4. Чому для токенів зв'язний список (або чому масив зі стелею)? Який у цього типу інтерфейс?
+5. Навіщо два проходи? Що ламається, якщо прохід один, а `JMP` іде вперед?
+6. Чому процесор не читає символи `.asm` напряму? Що додає лексер?
+7. Покажіть `search.asm` поруч із шістнадцятковим із Lab 4. Що вам дав асемблер — одним реченням?
+8. Що зламається першим, якщо таблиця розмірів у вашому асемблері й у `step()` розійдуться на один байт?
+
+---
+
+## Якщо встигаєте
+
+`bounce.asm`, якщо ви не взяли його в M3.
+
+**Дизасемблер**: з байтів назад у читабельний лістинг. Проженіть його на програмі, яку щойно зібрали, і порівняйте результат із вихідним текстом — цей повний оберт ловить помилки в розмірах інструкцій так, як не ловить більше нічого.
+
+Розбір виразів (`ADD A, 2+3`) із **двійковим деревом**. **Черга** відкладених операндів. Макрос `.define`. Прочитайте розділ *Scanning* у Crafting Interpreters і випишіть три речі, які ви пропустили.
+
+---
+
+## Що почитати й подивитись
+
+**Почитати**
+
+- Nystrom — [Scanning](https://craftinginterpreters.com/scanning.html) і [A bytecode VM](https://craftinginterpreters.com/a-virtual-machine.html). Перший розділ — **це і є ця лаба**, прочитайте його обов'язково. Віртуальна машина у вас уже своя; звідти беріть словник.
+- Вікіпедія — [лексичний аналіз](https://uk.wikipedia.org/wiki/%D0%9B%D0%B5%D0%BA%D1%81%D0%B8%D1%87%D0%BD%D0%B8%D0%B9_%D0%B0%D0%BD%D0%B0%D0%BB%D1%96%D0%B7), [зв'язний список](https://uk.wikipedia.org/wiki/%D0%97%D0%B2%27%D1%8F%D0%B7%D0%BD%D0%B8%D0%B9_%D1%81%D0%BF%D0%B8%D1%81%D0%BE%D0%BA).
+- Ваша ж таблиця інструкцій — [ISA.uk.md](ISA.uk.md). Це ціль асемблера. Якщо таблиця й лексер не сходяться, права таблиця; виправляйте лексер.

@@ -1,256 +1,246 @@
-# Lab 01 — A Box of Bytes: Types, Compilation, and a Memory You Can See
+# Лаба 01 — Коробка байтів: типи, компіляція і пам'ять, яку видно
 
-> "The purpose of computing is insight, not numbers."
-> — Richard Hamming
+> «Сенс обчислень — у розумінні, а не в числах.»
+> — Річард Геммінг
 
-**Weeks:** 1–2 · **Language focus:** what a program is, compilation, integer and floating types as *sizes*, overflow, `const`, characters as numbers, a tiny command-line program · **Project step:** a 4 KB box of memory you can dump and poke · **Course:** [EN](README.md) · [UK](README.uk.md) · **Notes:** [theory + experiments](lab-01-a-box-of-bytes.notes.md)
+**Тижні:** 1–2 · **Про мову:** що таке програма, компіляція, цілі й дробові типи як *розміри*, переповнення, `const`, символи як числа, маленька консольна програма · **Крок проєкту:** 4 КБ пам'яті, яку можна надрукувати й поколупати · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Notes:** [теорія і досліди](lab-01-a-box-of-bytes.notes.md)
 
-> **Before you start.** Two pages, one evening, once per semester:
-> [інструменти, термінал і git](setup.notes.md), then [C++ за годину](cpp-survival-kit.notes.md).
-> Keep [errors.notes.md](errors.notes.md) open in a tab — it decodes every compiler
-> and sanitizer message this course will throw at you.
+> **Перед початком.** Два тексти, один вечір, один раз за семестр:
+> [інструменти, термінал і git](setup.notes.md), далі [C++ за годину](cpp-survival-kit.notes.md).
+> І тримайте [errors.notes.md](errors.notes.md) у сусідній вкладці — там розібрані
+> всі повідомлення компілятора й санітайзера, які цей курс на вас вивалить.
 >
-> You do not start from an empty folder. Copy the [starter skeleton](starter/README.md):
-> the prompt loop and the dump are written for you, and four `TODO(lab-01)` markers
-> are yours. Those four are exactly this lab's idea.
+> Починаєте не з порожньої теки. Скопіюйте [скелет](starter/README.md): prompt і
+> дамп уже написані, а ваші — чотири мітки `TODO(lab-01)`. Оці чотири і є ідея
+> цієї лаби.
 
 ---
 
-## This lab's feature
+## Про що ця лаба
 
-A computer does not know about "integers" or "variables." It has **bytes** — groups of eight bits — sitting in memory, and a processor that can add them, copy them, and jump. Everything you will ever program is a story about those bytes.
+Комп'ютер не знає, що таке «ціле число» чи «змінна». У нього є **байти** — по вісім бітів — які лежать у пам'яті, і процесор, який уміє їх додавати, копіювати й перестрибувати. Усе, що ви колись напишете, — це розповідь про ці байти.
 
-A **type** is the story: how many bytes, which operations are allowed, and how the bits are read. `int` is not "a number." It is (usually) four bytes, two's complement, with wrap-on-overflow that the language calls *undefined* if it is signed. `char` is one byte that we sometimes print as a glyph. `float` is a scientific-notation trick that cannot hold `0.1` exactly. Once you have seen a byte printed as decimal, hex, binary, *and* a character at the same time, types stop being vocabulary from a lecture and become a view of memory.
+**Тип** — і є та розповідь: скільки байтів, які операції дозволені і як читати біти. `int` — це не «число». Це (зазвичай) чотири байти, доповняльний код, і переповнення, яке мова називає *невизначеним*, якщо тип знаковий. `char` — один байт, який ми іноді друкуємо як літеру. `float` — трюк із науковим записом, у який `0.1` не влазить точно. Щойно ви побачите один і той самий байт надрукований десятково, шістнадцятково, двійково **і** як символ — типи перестануть бути словами з лекції й стануть способом дивитись на пам'ять.
 
-This lab builds that view. You compile in the **terminal** (`c++` for the notes snippets, `cmake` for the project) with warnings and **sanitizers** on — extra checks baked into the binary so a wild memory bug prints a report instead of quietly “working.” That grows into **`ember`**: the name of *your* virtual computer, a 4096-byte box with a prompt that dumps it. (Rename the project if you like; the labs keep saying `ember` so we share a noun.) By the end of the course that box is a computer. Today it is just honest.
+Ця лаба будує такий спосіб. Збираєте в **терміналі** (`c++` для фрагментів із notes, `cmake` для проєкту) з увімкненими попередженнями і **санітайзерами** — це додаткові перевірки, вшиті в бінарник, щоб дикий баг із пам'яттю друкував звіт, а не тихо «працював». З цього виростає **`ember`** — ваш віртуальний комп'ютер, коробка на 4096 байтів із prompt, який її друкує. (Проєкт можна перейменувати; лаби кажуть `ember`, щоб у нас був спільний іменник.) Наприкінці курсу ця коробка стане комп'ютером. Сьогодні вона просто чесна.
 
 ---
 
-## Theory
+## Теорія
 
-### 1. Source is not what runs
+### 1. Виконується не той текст, який ви написали
 
-You write text. The **compiler** translates it into **machine code** the CPU can execute. Roughly:
+Ви пишете текст. **Компілятор** перекладає його в **машинний код**, який уміє виконувати процесор. Приблизно так:
 
 ```txt
-source.cpp  →  preprocessor  →  compiler  →  assembler  →  linker  →  ember
-   text           headers         .o files      bytes       libraries    a program
+source.cpp  →  препроцесор  →  компілятор  →  асемблер  →  лінкер  →  ember
+   текст        заголовки      файли .o        байти     бібліотеки   програма
 ```
 
-You do not need to recite the pipeline. You need three consequences:
+Переказувати цей ланцюжок напам'ять не треба. Треба розуміти три наслідки.
 
-- A **syntax error** is the compiler refusing to translate. The program never existed.
-- A **warning** is the compiler saying "this is legal and I am suspicious." We treat warnings as errors (`-Werror`) so suspicion cannot hide.
-- A **runtime error** is the program running and then doing something the machine or the sanitizer hates: dividing by zero, walking off an array, using an uninitialized value. The compiler cannot catch all of these — that is why **AddressSanitizer** and **UndefinedBehaviorSanitizer** exist, and why they stay on all semester.
+- **Синтаксична помилка** — компілятор відмовився перекладати. Програми не існувало взагалі.
+- **Попередження** — компілятор каже «це законно, але я тут щось підозрюю». У нас попередження прирівняні до помилок (`-Werror`), щоб ця підозра не змогла сховатись.
+- **Помилка виконання** — програма вже біжить і робить те, чого не терпить машина або санітайзер: ділить на нуль, вилазить за масив, читає неініціалізоване. Компілятор не спіймає всього цього — саме тому існують **AddressSanitizer** і **UndefinedBehaviorSanitizer**, і тому вони ввімкнені весь семестр.
 
-`main` is a function the runtime *calls* when the program starts. `return 0` means success to the operating system. That is the whole contract for Lab 1.
+`main` — це функція, яку *викликає* середовище виконання на старті програми. `return 0` означає для операційної системи «все добре». Оце й увесь контракт для першої лаби.
 
-### 2. A type is a size and a set of operations
+### 2. Тип — це розмір і набір операцій
 
-Declare `int x = 65;` and the compiler picks a few bytes (print `sizeof(int)` — know *your* number, do not memorize a textbook's), stores a two's-complement representation of 65 there, and will let you `+ - * / %` on it. The **same bits** `01000001` are also the ASCII character `'A'`. Memory does not care. Your type annotation is a promise about how you will read them.
+Пишете `int x = 65;` — компілятор бере кілька байтів (надрукуйте `sizeof(int)`: знайте **своє** число, не завчайте чуже з підручника), кладе туди 65 у доповняльному коді й дозволяє вам `+ - * / %`. **Ті самі біти** `01000001` — це ще й символ `'A'` в ASCII. Пам'яті все одно. Тип — це ваша обіцянка, як ви збираєтесь їх читати.
 
-| Type (typical 64-bit) | `sizeof` | What it's for |
+| Тип (типова 64-бітна машина) | `sizeof` | Для чого |
 |---|---|---|
-| `char` / `std::uint8_t` | 1 | A byte. Characters. The cell of `ember`'s memory. |
-| `std::uint16_t` | 2 | Addresses into 4 KB. An unsigned 16-bit integer. |
-| `int` / `std::int32_t` | 4 | Everyday signed integers. Overflow of *signed* `int` is undefined. |
-| `unsigned` / `std::uint32_t` | 4 | Modular arithmetic. Overflow wraps. Prefer this when wrap is the point. |
-| `float` | 4 | ~7 decimal digits. Fast, approximate. |
-| `double` | 8 | ~16 decimal digits. Default for real arithmetic. |
+| `char` / `std::uint8_t` | 1 | Байт. Символи. Клітинка пам'яті `ember`. |
+| `std::uint16_t` | 2 | Адреси в межах 4 КБ. Беззнакове 16-бітне ціле. |
+| `int` / `std::int32_t` | 4 | Звичайні знакові цілі. Переповнення *знакового* `int` невизначене. |
+| `unsigned` / `std::uint32_t` | 4 | Арифметика за модулем. Переповнення загортається. Беріть, коли загортання і є задум. |
+| `float` | 4 | ~7 десяткових цифр. Швидко, приблизно. |
+| `double` | 8 | ~16 десяткових цифр. Типовий вибір для дробових. |
 
-Prefer the `<cstdint>` names (`std::uint8_t`, `std::uint16_t`) when the width *matters* — it does, in a VM. Use `int` for loop indices until Lab 5 tells you otherwise.
+Коли ширина **важлива** — а у віртуальній машині вона важлива завжди, — беріть імена з `<cstdint>`: `std::uint8_t`, `std::uint16_t`. Для лічильників у циклах `int` годиться, аж поки Lab 5 не скаже інакше.
 
-**Literals:** `65` is decimal, `0x41` is hex, `0b01000001` is binary (C++14), `'A'` is a character, `65.0` is a double. They can be the same bits. Write all four next to a dump this week.
+**Літерали:** `65` десятковий, `0x41` шістнадцятковий, `0b01000001` двійковий (з C++14), `'A'` символьний, `65.0` — `double`. За всім цим можуть стояти ті самі біти. Цього тижня випишіть усі чотири поруч із дампом.
 
-**Integer division truncates toward zero:** `5 / 2` is `2`, not `2.5`. Remainder is `%`. Mixing `int` and `double` converts; know which way (`int` → `double` is usual in `1 / 2.0`).
+**Цілочисельне ділення відкидає дріб:** `5 / 2` це `2`, а не `2.5`. Залишок — `%`. Коли в одному виразі `int` і `double`, одне перетворюється на інше; знайте, в який бік (`1 / 2.0` — це `int` → `double`).
 
-**`const`** means "this name will not be used to change the bits." The bits still sit in memory. Use `const` by default for values that should not move — `const std::size_t MEM_SIZE = 4096;` — so the compiler yells if you accidentally do.
+**`const`** означає «через це ім'я біти не змінюватимуть». Самі біти нікуди з пам'яті не діваються. За замовчуванням пишіть `const` для всього, що не має рухатись — `const std::size_t MEM_SIZE = 4096;` — щоб компілятор закричав, якщо ви випадково спробуєте.
 
-### 3. Overflow, floats, and other lies
+### 3. Переповнення, дробові й інша брехня
 
-Unsigned wrap is defined: `std::uint8_t x = 255; x = x + 1;` → `0`. Signed overflow is **undefined behaviour** — the compiler may assume it never happens and then your loop does something insane. In `ember`, memory cells are **unsigned bytes**. Arithmetic you implement later (Lab 2) will wrap on purpose, on `uint8_t` / `uint16_t`.
+Беззнакове загортання визначене: `std::uint8_t x = 255; x = x + 1;` дає `0`. Знакове переповнення — **невизначена поведінка**: компілятор має право вважати, що його не буває, і тоді ваш цикл почне робити щось несосвітенне. У `ember` клітинки пам'яті — **беззнакові байти**. Арифметика, яку ви напишете далі (Lab 2), теж загортатиметься навмисно, на `uint8_t` / `uint16_t`.
 
-Floating point is scientific notation in binary: a sign, an exponent, a fraction. It cannot represent most decimals. `0.1 + 0.2 == 0.3` is `false`. This is not a bug in your compiler. Do not use `==` on floats for "are these the same measurement"; compare a difference against a tolerance, or (better, this course) keep money and pixels in integers.
+Дробові числа — це науковий запис у двійковій системі: знак, порядок, дробова частина. Більшість десяткових дробів туди не вкладаються. `0.1 + 0.2 == 0.3` дає `false`. Це не баг вашого компілятора. Не питайте у `float` через `==`, чи це «те саме значення»: або порівнюйте різницю з допуском, або (краще, і саме так у цьому курсі) тримайте гроші й пікселі в цілих.
 
-### 4. Characters are numbers with a costume
+### 4. Символ — це число в костюмі
 
-`'A'` is the integer 65 in ASCII. `'A' + 1` is `'B'`. A **string** this early is a sequence of those bytes ending in `'\0'` (Lab 5 treats this properly). Escape sequences: `'\n'` newline, `'\t'` tab, `'\\'` a real backslash. You can store any byte, including ones that do not print; a dump that shows `.` for non-printable ASCII is a gift to your future self.
+`'A'` — це 65 в ASCII. `'A' + 1` — це `'B'`. **Рядок** на цьому етапі — послідовність таких байтів, яка закінчується `'\0'` (по-справжньому це буде Lab 5). Екрановані послідовності: `'\n'` — новий рядок, `'\t'` — табуляція, `'\\'` — справжній зворотний слеш. Зберігати можна будь-який байт, зокрема й такий, що не друкується; дамп, який показує `.` замість недрукованих символів, — це подарунок собі майбутньому.
 
-### 5. Variables are names for storage; initialization is not optional
+### 5. Змінна — це ім'я для місця в пам'яті, а ініціалізація не опція
 
-`int x;` without an initializer is a named box with **garbage** in it (whatever was in that stack slot). Reading it is UB. Always initialize: `int x = 0;`. A **literal** is a value written in the source. A **constant** is a named value that cannot be assigned to. A **variable** is a named value that can.
+`int x;` без ініціалізатора — це іменована коробка зі **сміттям** усередині (тим, що лежало в цьому шматку стека). Читати його — UB. Ініціалізуйте завжди: `int x = 0;`. **Літерал** — значення, записане прямо в коді. **Константа** — іменоване значення, якому не можна присвоїти. **Змінна** — іменоване значення, якому можна.
 
-Scope starts next lab in anger; for now: a name lives from its declaration to the end of the `{ }` block it sits in.
+Про область видимості всерйоз ітиметься в наступній лабі; поки що досить знати: ім'я живе від свого оголошення до кінця блока `{ }`, у якому воно стоїть.
 
-### Prove it to yourself (a 15-line program, ~15 minutes)
+### Перевірте самі (програма на 15 рядків, ~15 хвилин)
 
-Paste each snippet into `scratch.cpp`. From the same directory:
+Кожен фрагмент кладіть у `scratch.cpp`. З тієї самої теки:
 
 ```bash
 c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined scratch.cpp -o scratch && ./scratch
 ```
 
-No IDE Run button. The output of `./scratch` is what you compare to the notes' **Очікуй**. Required — notes §§1–4, same snippets:
+Ніякої кнопки Run в IDE. Вивід `./scratch` — це те, що ви звіряєте з **Очікуй** у notes. Обов'язково — notes §§1–4, ті самі фрагменти:
 
-1. Print `sizeof(char)`, `sizeof(int)`, `sizeof(float)`, `sizeof(double)`, `sizeof(void*)`. Write the numbers in the README. They are *your* machine's.
-2. `std::uint8_t u = 255; u = u + 1;` and `int s = 2147483647; s = s + 1;` — compile the second with sanitizers. What happens to each?
-3. `std::cout << (0.1 + 0.2) << '\n';` and `std::cout << std::boolalpha << (0.1 + 0.2 == 0.3) << '\n';`
-4. Print `65`, `0x41`, `static_cast<int>('A')`, and `static_cast<char>(65)` on four lines. Then `'A' + 1`.
+1. Надрукуйте `sizeof(char)`, `sizeof(int)`, `sizeof(float)`, `sizeof(double)`, `sizeof(void*)`. Випишіть числа в README. Це числа **вашої** машини.
+2. `std::uint8_t u = 255; u = u + 1;` і `int s = 2147483647; s = s + 1;` — другий зберіть із санітайзерами. Що стається з кожним?
+3. `std::cout << (0.1 + 0.2) << '\n';` і `std::cout << std::boolalpha << (0.1 + 0.2 == 0.3) << '\n';`
+4. Надрукуйте `65`, `0x41`, `static_cast<int>('A')` і `static_cast<char>(65)` чотирма рядками. Потім `'A' + 1`.
 5. `int a = 5, b = 2; std::cout << a / b << ' ' << a / 2.0 << '\n';`
 
 ---
 
-## Project step: a box of 4096 bytes
+## Крок проєкту: коробка на 4096 байтів
 
-### Set up the project
+### Завести проєкт
 
 ```bash
-cp -r path/to/programming-fundamentals/starter ~/ember
+cp -r шлях/до/programming-fundamentals/starter ~/ember
 cd ~/ember
 git init
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
-./build/ember          # greeting + prompt; type help, then quit
+./build/ember          # вітання і prompt; напишіть help, потім quit
 ```
 
-It builds and runs before you have written a line. That is deliberate: your
-first act this semester is **reading working code**, not staring at an empty
-file.
+Воно збирається й запускається ще до того, як ви написали хоч рядок. Це навмисно: ваша перша дія в семестрі — **прочитати робочий код**, а не дивитись у порожній файл.
 
-The layout you get — and keep for all eight labs:
+Розкладка, яку ви отримуєте і тримаєте всі вісім лаб:
 
 ```txt
 ember/
-  CMakeLists.txt      # C++17, -Wall -Wextra -Werror, ASan+UBSan on Debug
-  README.md           # yours to write; grows every lab
+  CMakeLists.txt      # C++17, -Wall -Wextra -Werror, ASan+UBSan на Debug
+  README.md           # пишете ви; росте з кожною лабою
   src/
-    main.cpp          # GIVEN: reads a line, dispatches a command, loops until quit
-    memory.hpp        # GIVEN: const MEM_SIZE = 4096; using Byte = std::uint8_t;
-    memory.cpp        # YOURS: get/set with bounds checks
-    dump.hpp          # GIVEN
-    dump.cpp          # mostly GIVEN: the hex loop. YOURS: the ASCII gutter, show_byte
+    main.cpp          # ДАНО: читає рядок, розбирає команду, крутиться до quit
+    memory.hpp        # ДАНО: const MEM_SIZE = 4096; using Byte = std::uint8_t;
+    memory.cpp        # ВАШЕ: get/set із перевіркою меж
+    dump.hpp          # ДАНО
+    dump.cpp          # майже ДАНО: цикл hex. ВАШЕ: ASCII-колонка, show_byte
   .clang-format
   .gitignore          # build/, *.o
 ```
 
-`main.cpp` uses loops, functions and string handling, which the course only
-teaches in Labs 4, 5 and 7. In Lab 1 you **read** that file; you do not write it.
-Every later lab adds one `else if` branch to the dispatcher that is already there.
+У `main.cpp` є цикли, функції й робота з рядками — тобто те, що курс пояснює аж у лабах 4, 5 і 7. У першій лабі ви цей файл **читаєте**, а не пишете. Кожна наступна лаба дописує одну гілку `else if` у диспетчер, який там уже є.
 
-Note `struct Memory { Byte data[MEM_SIZE]{}; };` in `memory.hpp` — the `{}`
-**zeroes** the box. That one brace is the difference between a computer and
-garbage, and M4 makes you prove it.
+Зверніть увагу на `struct Memory { Byte data[MEM_SIZE]{}; };` у `memory.hpp` — ці `{}` **занулюють** коробку. Одна пара дужок — це різниця між комп'ютером і сміттям, і M4 змусить вас це довести.
 
-### Milestones
+### Етапи
 
-Find your work with one command:
+Свою роботу знайдете однією командою:
 
 ```bash
 grep -rn "TODO(lab-01)" src/
 ```
 
-**M1 — It builds, it runs, sanitizers are on.**
-`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug` then `cmake --build build`. `./build/ember` prints a one-line greeting and a prompt. A `CMakeLists.txt` that does not pass `-fsanitize=address,undefined` on Apple/Linux Debug builds is not done. Paste the greeting + prompt into the README. Then open `src/main.cpp` and read it top to bottom — you should be able to say, out loud, what each of the five `else if` branches does. (Optional: `lldb ./build/ember` in that same terminal — never required.)
+**M1 — збирається, запускається, санітайзери ввімкнені.**
+`cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug`, потім `cmake --build build`. `./build/ember` друкує однорядкове вітання і prompt. `CMakeLists.txt`, який на Debug-збірці під Apple чи Linux не передає `-fsanitize=address,undefined`, не вважається зробленим. Вставте вітання і prompt у README. Потім відкрийте `src/main.cpp` і прочитайте згори донизу — ви маєте вміти вголос сказати, що робить кожна з п'яти гілок `else if`. (За бажанням: `lldb ./build/ember` у тому самому терміналі — це ніколи не обов'язково.)
 
-**M2 — The box is visible.**
-`dump` already prints 4096 bytes as hex, 16 bytes per line, with an address column. The ASCII gutter is the first `TODO`: a printable byte (`0x20–0x7E`) shows as itself, anything else as `.`. After a fresh start the dump is all zeroes — *prove it* by pasting the first three lines of terminal output into the README.
+**M2 — коробку видно.**
+`dump` уже друкує 4096 байтів шістнадцятково, по 16 у рядку, з колонкою адрес. ASCII-колонка — це перший `TODO`: друкований байт (`0x20–0x7E`) показується сам собою, будь-який інший — крапкою. Після свіжого старту дамп — суцільні нулі; **доведіть це**, вставивши перші три рядки з термінала в README.
 
-**M3 — Peek and poke.**
-Three `TODO`s: `mem_get` and `mem_set` reject addresses `>= 4096` instead of touching memory, and `show_byte` prints one byte as **decimal, hex, binary, and character**. *Check:* `set 0 65` then `get 0` shows
+**M3 — прочитати й записати байт.**
+Три `TODO`: `mem_get` і `mem_set` відмовляють на адресах `>= 4096` замість того, щоб лізти в пам'ять, а `show_byte` друкує байт **десятково, шістнадцятково, двійково і символом**. *Перевірка:* `set 0 65`, далі `get 0` показує
 
 ```txt
 65  0x41  0b01000001  'A'
 ```
 
-Then `set 5000 1` and confirm it says so instead of crashing.
+Потім `set 5000 1` — і переконайтесь, що програма про це каже, а не падає.
 
-**M4 — Break it on purpose, then write it down.**
-Three experiments, evidence in the README:
+**M4 — зламайте навмисно й запишіть, що сталося.**
+Чотири досліди, докази в README:
 
-1. `set 0 255`, then `get 0`, then add a three-line `inc <addr>` command to the dispatcher that reads a byte, adds one, and writes it back. `inc 0` then `get 0` shows `0`, not `256`: the byte wrapped. Contrast that with a *signed* `int` overflow compiled with UBSan (snippet from theory §3), which is undefined behaviour and gets you a report.
-2. Run notes §3 (`scratch.cpp` + `c++ … && ./scratch`) and explain why `== 0.3` fails — one paragraph, not a IEEE-754 essay.
-3. `set 0 65` / `set 1 66` / `set 2 0` and dump — the gutter shows `|AB..............|`. You have a C-string `"AB"` sitting in memory. Note the `0` that terminates it. Lab 5 will care.
-4. Delete the `{}` from `Byte data[MEM_SIZE]{}` in `memory.hpp`, rebuild, `dump`. Paste what you see. **Put the brace back** — reading uninitialized memory is undefined behaviour, and this course does not ship UB.
+1. `set 0 255`, потім `get 0`, потім допишіть у диспетчер трирядкову команду `inc <addr>`: прочитати байт, додати одиницю, записати назад. `inc 0`, далі `get 0` показує `0`, а не `256` — байт загорнувся. Порівняйте це з переповненням **знакового** `int`, зібраним з UBSan (фрагмент із теорії §3): це вже невизначена поведінка, і за неї ви отримаєте звіт.
+2. Проженіть notes §3 (`scratch.cpp` + `c++ … && ./scratch`) і поясніть, чому `== 0.3` не спрацьовує — одним абзацом, а не рефератом про IEEE-754.
+3. `set 0 65` / `set 1 66` / `set 2 0`, потім `dump` — у колонці видно `|AB..............|`. У пам'яті лежить C-рядок `"AB"`. Зверніть увагу на нуль, який його закінчує. У Lab 5 це стане важливим.
+4. Приберіть `{}` з `Byte data[MEM_SIZE]{}` у `memory.hpp`, перезберіть, зробіть `dump`. Вставте те, що побачили. **Поверніть дужки на місце** — читати неініціалізовану пам'ять це UB, а цей курс UB не здає.
 
-### Definition of done
+### Коли вважати готовим
 
-- The project builds with C++17, warnings-as-errors, and sanitizers in Debug.
-- No `TODO(lab-01)` markers left in `src/`.
-- `dump` / `get` / `set` / `inc` / `quit` work; out-of-range addresses are rejected.
-- `get` shows four views of the same byte.
-- The four experiments are in the README with **pasted terminal output**.
-- Repo tagged `lab-01`.
-
----
-
-## Levels
-
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
-
-### Basic — "the box is honest" (~6–8 hours)
-- The [starter skeleton](starter/README.md) builds with C++17, `-Werror` and sanitizers on Debug.
-- All four `TODO(lab-01)` markers are gone: `mem_get`, `mem_set`, the ASCII gutter, `show_byte`.
-- `dump`, `get`, `set`, `quit` work; out-of-range addresses are rejected with a message.
-- README has your `sizeof` table and pasted `dump` / `get` output.
-- Repo tagged `lab-01`.
-
-### Standard — target (~11–13 hours)
-- Everything in **Definition of done** above.
-- Notes §§1–4 run and written up, in your own words.
-- The four M4 breakages documented with pasted terminal output: unsigned wrap via `inc`, `0.1 + 0.2`, `"AB "` in the dump, and the missing `{}`.
-- README explains *why* an `ember` cell is `std::uint8_t` and not `int`.
-
-### Advanced — distinction (~16 hours)
-- Everything above, plus the Stretch: `set16` and the endianness answer, proven with a dump.
-- `.clang-format` chosen and applied to the whole tree.
-- Optional: the same `int x = 65;` in Compiler Explorer, with the instruction identified.
+- Проєкт збирається на C++17, попередження прирівняні до помилок, на Debug увімкнені санітайзери.
+- У `src/` не лишилось жодної мітки `TODO(lab-01)`.
+- `dump` / `get` / `set` / `inc` / `quit` працюють; адреси поза межами відхиляються.
+- `get` показує чотири погляди на той самий байт.
+- Чотири досліди описані в README зі **вставленим виводом термінала**.
+- Репозиторій має тег `lab-01`.
 
 ---
 
-## Deliverable checklist
+## Рівні
 
-- [ ] CMake project, C++17, `-Wall -Wextra -Werror`, ASan+UBSan on Debug (Unix).
-- [ ] `Memory` of 4096 zeroed bytes; bounds-checked `get`/`set`.
-- [ ] `dump` in hex + ASCII; `get` in dec/hex/bin/char; `inc`; `quit`.
-- [ ] sizeof table and `dump`/`get` output pasted from the terminal.
-- [ ] Experiments 1–4 documented.
-- [ ] Git tag `lab-01`.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
 
----
+### Basic — «коробка чесна» (~6–8 годин)
+- [Скелет](starter/README.md) збирається на C++17 з `-Werror` і санітайзерами на Debug.
+- Усі чотири мітки `TODO(lab-01)` зникли: `mem_get`, `mem_set`, ASCII-колонка, `show_byte`.
+- `dump`, `get`, `set`, `quit` працюють; адреси поза межами відхиляються з повідомленням.
+- У README є ваша таблиця `sizeof` і вставлений вивід `dump` / `get`.
+- Тег `lab-01`.
 
-## Reflection — explain it at the whiteboard
+### Standard — цільовий (~11–13 годин)
+- Усе з розділу **Коли вважати готовим**.
+- Notes §§1–4 прогнані й переказані своїми словами.
+- Чотири поломки з M4 описані зі вставленим виводом: загортання через `inc`, `0.1 + 0.2`, `"AB\0"` у дампі й прибрані `{}`.
+- У README пояснено, **чому** клітинка `ember` — це `std::uint8_t`, а не `int`.
 
-1. What does the compiler do? Name one error it can catch and one it cannot.
-2. Why is `sizeof` not the same on every machine? What *is* the same if you use `std::uint8_t`?
-3. Why is signed overflow undefined but unsigned wrap defined? Which one should `ember`'s bytes use, and why?
-4. Why is `0.1 + 0.2` not `0.3`? When would you store a quantity as `int` instead of `float`?
-5. The bits `01000001` — give three types you might use to read them, and what you'd "see."
-6. What is the difference between a literal, a `const`, and a variable? Why initialize?
-7. What does AddressSanitizer buy you that a passing "it printed 42" test does not?
-8. In `main.cpp`, which line decides *which* command runs? What happens to a line you did not teach it?
-
----
-
-## Stretch
-
-Write `set16 <addr> <value>` that stores a 16-bit value. Then answer, with a dump: **where does the low byte go?** (This is [endianness](https://en.wikipedia.org/wiki/Endianness). Your laptop is almost certainly little-endian: `set16 0 0x1234` puts `34` at address 0 and `12` at address 1.) Optionally paste the same `int x = 65;` into [Compiler Explorer](https://godbolt.org/) and circle the instruction that moves 65 into a register.
+### Advanced — відмінно (~16 годин)
+- Усе вище плюс Stretch: `set16` і відповідь про порядок байтів, доведена дампом.
+- Обраний `.clang-format` застосований до всього дерева.
+- За бажанням: той самий `int x = 65;` у Compiler Explorer із показаною інструкцією.
 
 ---
 
-## Resources
+## Чекліст здачі
 
-**Watch**
+- [ ] Проєкт на CMake, C++17, `-Wall -Wextra -Werror`, ASan+UBSan на Debug (Unix).
+- [ ] `Memory` на 4096 занулених байтів; `get`/`set` із перевіркою меж.
+- [ ] `dump` у hex + ASCII; `get` у dec/hex/bin/char; `inc`; `quit`.
+- [ ] Таблиця `sizeof` і вивід `dump`/`get`, скопійовані з термінала.
+- [ ] Досліди 1–4 описані.
+- [ ] Тег `lab-01`.
 
-- Crash Course Computer Science — [How Computers Calculate (11 min)](https://www.youtube.com/watch?v=1I5ZMmrOfnA) and [Registers and RAM (12 min)](https://www.youtube.com/watch?v=fpnE6UAfbtU). Binary, then "the box." Watch these first if "byte" still feels like vocabulary.
-- Ben Eater — [How do computers work? (short)](https://www.youtube.com/watch?v=ZXlr4s_yzkE). A register is a thing you can point at on a desk.
+---
 
-**Read**
+## На захисті — поясніть біля дошки
 
-- learncpp.com — [Introduction to programming](https://www.learncpp.com/cpp-tutorial/introduction-to-these-tutorials/), [Variables and initialization](https://www.learncpp.com/cpp-tutorial/variable-assignment-and-initialization/), [Void, literals, const](https://www.learncpp.com/cpp-tutorial/constants/). The textbook for the C++ spelling.
-- cppreference — [`cstdint`](https://en.cppreference.com/w/cpp/header/cstdint), [fundamental types](https://en.cppreference.com/w/cpp/language/types). The widths.
-- Goldberg — [What Every Computer Scientist Should Know About Floating-Point Arithmetic](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html) is the famous paper; you need *one page of intuition*, not the paper. The experiment in §3 is enough for this lab.
-- CMake — [tutorial, step 1](https://cmake.org/cmake/help/latest/guide/tutorial/index.html). Twenty minutes; you'll live in it all semester.
+1. Що робить компілятор? Назвіть одну помилку, яку він ловить, і одну, яку ні.
+2. Чому `sizeof` різний на різних машинах? А що лишається однаковим, якщо взяти `std::uint8_t`?
+3. Чому знакове переповнення невизначене, а беззнакове загортання — ні? Що з цього мають використовувати байти `ember` і чому?
+4. Чому `0.1 + 0.2` не дорівнює `0.3`? Коли величину варто тримати в `int`, а не у `float`?
+5. Біти `01000001` — назвіть три типи, якими їх можна прочитати, і що ви «побачите» кожним.
+6. Чим літерал відрізняється від `const` і від змінної? Навіщо ініціалізувати?
+7. Що вам дає AddressSanitizer такого, чого не дає тест «ну, надрукувало 42»?
+8. Який рядок у `main.cpp` вирішує, **яка** команда виконається? Що станеться з командою, якої ви його не навчили?
+
+---
+
+## Якщо встигаєте
+
+Напишіть `set16 <addr> <value>`, яка кладе 16-бітне значення. І дайте відповідь, підкріплену дампом: **куди подівся молодший байт?** Це [порядок байтів](https://uk.wikipedia.org/wiki/%D0%9F%D0%BE%D1%80%D1%8F%D0%B4%D0%BE%D0%BA_%D0%B1%D0%B0%D0%B9%D1%82%D1%96%D0%B2), і ваш ноутбук майже напевно little-endian: `set16 0 0x1234` кладе `34` за адресою 0 і `12` за адресою 1. За бажанням укиньте той самий `int x = 65;` у [Compiler Explorer](https://godbolt.org/) і знайдіть інструкцію, яка кладе 65 у регістр.
+
+---
+
+## Що почитати й подивитись
+
+**Подивитись**
+
+- Crash Course Computer Science — [How Computers Calculate (11 хв)](https://www.youtube.com/watch?v=1I5ZMmrOfnA) і [Registers and RAM (12 хв)](https://www.youtube.com/watch?v=fpnE6UAfbtU). Спочатку двійкова система, потім «коробка». Починайте з них, якщо слово «байт» досі звучить як термін із лекції.
+- Ben Eater — [How do computers work? (коротко)](https://www.youtube.com/watch?v=ZXlr4s_yzkE). Регістр — це річ, на яку можна показати пальцем на столі.
+
+**Почитати**
+
+- learncpp.com — [вступ](https://www.learncpp.com/cpp-tutorial/introduction-to-these-tutorials/), [змінні та ініціалізація](https://www.learncpp.com/cpp-tutorial/variable-assignment-and-initialization/), [`void`, літерали, `const`](https://www.learncpp.com/cpp-tutorial/constants/). Підручник, у якому дивляться, як це пишеться на C++.
+- cppreference — [`cstdint`](https://en.cppreference.com/w/cpp/header/cstdint), [фундаментальні типи](https://en.cppreference.com/w/cpp/language/types). Ширини.
+- Goldberg — [What Every Computer Scientist Should Know About Floating-Point Arithmetic](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html) — знаменита стаття; вам потрібна **одна сторінка розуміння**, а не вона вся. Досліду з §3 для цієї лаби досить.
+- CMake — [туторіал, крок 1](https://cmake.org/cmake/help/latest/guide/tutorial/index.html). Двадцять хвилин, а жити в ньому весь семестр.

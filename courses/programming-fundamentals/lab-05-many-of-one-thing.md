@@ -1,107 +1,102 @@
-# Lab 05 — Many of One Thing: Arrays, Strings, Search, and a Screen
+# Лаба 05 — Багато однакового: масиви, рядки, пошук і екран
 
-> "An array is a lie we tell about a stretch of memory: same type, adjacent, indexable in O(1)."
+> «Масив — це зручна вигадка про шматок пам'яті: однаковий тип, поруч, індексується за одну дію.»
 
-**Weeks:** 9–10 · **Language focus:** 1D arrays, 2D as `y * width + x`, C-strings and `'\0'`, linear search (again, on purpose), bubble/insertion sort · **Project step:** a 64×32 display, `PLOT`, sort a region, print a string · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 04](lab-04-the-shape-of-control.md) · **Notes:** [theory + experiments](lab-05-many-of-one-thing.notes.md)
-
----
-
-## This lab's feature
-
-One byte is a cell. **Many bytes of the same type, packed next to each other,** are an array. The CPU already had this — `ember`'s memory *is* `Byte data[4096]`. This week you start *using* that fact as a programmer: index, nest two indices into a grid, stop at `'\0'`, swap two cells until a slice is sorted.
-
-What makes the array visible is the **display** — and the display is not a separate array. It is **256 bytes of `ember` memory**, at `0xA00`, one bit per pixel ([ISA.md §7](ISA.md#7-the-display-is-memory)). `SHOW` draws them. `PLOT` sets one. But so does `STORE [H], A`, and that is the point of the lab: your screen is a region of the same box you have been dumping since week 2.
-
-Run `dump` after drawing something and read the hex at `0xA00`. Those are your pixels. Two dimensions, a row stride of 8 bytes, one bit per cell — the formula is the whole of "2D", and nothing about it is a metaphor.
-
-Strings are arrays of `char` that agree to end at `0`. You already poked `"AB"` in Lab 1. Now `OUTS addr` prints until `'\0'` or a max length — and you will not walk off the box doing it.
+**Тижні:** 9–10 · **Про мову:** одновимірні масиви, двовимірність як `y * ширина + x`, C-рядки і `'\0'`, лінійний пошук (навмисно ще раз), бульбашка й вставки · **Крок проєкту:** екран 64×32, `PLOT`, сортування ділянки, друк рядка · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Попередня:** [Лаба 04](lab-04-the-shape-of-control.md) · **Notes:** [теорія і досліди](lab-05-many-of-one-thing.notes.md)
 
 ---
 
-## Theory
+## Про що ця лаба
 
-### 1. An array is storage plus a rule for the i-th element
+Один байт — це клітинка. **Багато байтів одного типу, покладених поруч,** — це масив. У процесора він уже був: пам'ять `ember` **і є** `Byte data[4096]`. Цього тижня ви починаєте *користуватись* цим фактом як програміст: індексувати, вкладати два індекси в сітку, зупинятись на `'\0'`, міняти клітинки місцями, поки ділянка не стане відсортованою.
+
+Побачити масив дає **екран** — і екран тут не окремий масив. Це **256 байтів пам'яті `ember`** за адресою `0xA00`, по біту на піксель ([ISA.uk.md §7](ISA.uk.md#7-екран-це-память)). `SHOW` їх малює. `PLOT` виставляє один. Але те саме робить і `STORE [H], A` — і в цьому вся суть лаби: ваш екран це ділянка тієї самої коробки, яку ви дампите з другого тижня.
+
+Намалюйте щось і зробіть `dump`, а потім подивіться на hex починаючи з `0xA00`. Це ваші пікселі. Два виміри, крок рядка вісім байтів, біт на клітинку — формула і є вся «двовимірність», і нічого метафоричного в ній немає.
+
+Рядки — це масиви `char`, які домовились закінчуватись нулем. `"AB"` ви вже клали в пам'ять у першій лабі. Тепер `OUTS addr` друкує до `'\0'` або до стелі — і при цьому не вилазить за коробку.
+
+---
+
+## Теорія
+
+### 1. Масив — це пам'ять плюс правило, де лежить i-й елемент
 
 ```cpp
-Byte buf[8] = {1, 2, 3};  // rest zeroed
+Byte buf[8] = {1, 2, 3};  // решта занулена
 buf[0] = 9;
 ```
 
-`buf[i]` is `*(buf + i)` (Lab 3). Valid `i` is `0 .. 7`. `buf[8]` is ASan again. The name `buf` in most expressions **decays** to a pointer to the first element — that is why you pass `buf` and `size` to functions separately. (A real `std::array` or `std::span` carries the size; you may look, not substitute, until you can explain decay.)
+`buf[i]` — це `*(buf + i)` (Lab 3). Дозволені `i` від `0` до `7`. `buf[8]` — це знову ASan. Ім'я `buf` у більшості виразів **розпадається** до вказівника на перший елемент — саме тому у функцію передають окремо `buf` і окремо `size`. (Справжні `std::array` чи `std::span` носять розмір із собою; подивитись можна, підмінити ними свій код — поки не поясните, що таке розпад, ні.)
 
-Initialize. A missing `{}` on `Byte buf[8];` is garbage.
+Ініціалізуйте. `Byte buf[8];` без `{}` — це сміття.
 
-### 2. Two dimensions are one, with a stride
+### 2. Два виміри — це один вимір і крок
 
-There is no 2D memory. A matrix `m[row][col]` is a formula:
-
-```txt
-index = row * NCOLS + col
-```
-
-Row-major (C/C++) means **cells of a row sit together**. Nested loops: outer `row`, inner `col` walks memory sequentially — faster, and it matches how you dump a framebuffer.
-
-`ember`'s display adds one twist: a pixel is a **bit**, not a byte, so the row stride is measured in bytes and the column splits into byte-and-bit:
+Двовимірної пам'яті не існує. Матриця `m[рядок][колонка]` — це формула:
 
 ```txt
-byte address = 0xA00 + y * 8 + (x / 8)      ; 64 pixels / 8 bits = 8 bytes per row
-bit number   = 7 - (x % 8)                  ; bit 7 is the LEFTMOST pixel
-lit          = (mem[byte address] >> bit number) & 1
+індекс = рядок * КІЛЬКІСТЬ_КОЛОНОК + колонка
 ```
 
-`y * 8` is the stride. `x / 8` is which byte in the row. `x % 8` is which bit in
-that byte — and `7 -` is there because we write bits left to right but number
-them right to left. Get that backwards and your picture comes out mirrored in
-groups of eight, which is a wonderfully diagnosable bug.
+Рядковий порядок (як у C і C++) означає, що **клітинки одного рядка лежать поруч**. Вкладені цикли: зовнішній по рядках, внутрішній по колонках іде пам'яттю послідовно — це швидше і збігається з тим, як ви дампите відеопам'ять.
 
-Setting and clearing that bit is Lab 2's triple, arriving with a job:
-`mem[a] |= (1u << n)` and `mem[a] &= ~(1u << n)`.
+В екрані `ember` є додатковий поворот: піксель це **біт**, а не байт, тому крок рядка міряється в байтах, а колонка розпадається на «який байт» і «який біт»:
 
-### 3. Strings: length by convention
+```txt
+адреса байта = 0xA00 + y * 8 + (x / 8)      ; 64 пікселі / 8 бітів = 8 байтів на рядок
+номер біта   = 7 - (x % 8)                  ; біт 7 — найлівіший піксель
+горить       = (mem[адреса байта] >> номер біта) & 1
+```
 
-A **C-string** is `char s[] = "hi";` which is `{ 'h', 'i', '\0' }`. `strlen` walks until 0. If the 0 is missing, it walks into the void (ASan). In `ember`, guest strings are the same bytes, living in the data region at `0x800`. `OUTS` must have a **cap** (256 bytes, per [ISA.md](ISA.md)) as well as `'\0'` — because the guest program that forgot its terminator is *your* problem to survive, not a reason to read 4 KB of screen memory into the terminal.
+`y * 8` — це крок. `x / 8` — котрий байт у рядку. `x % 8` — котрий біт у цьому байті, а `7 -` стоїть тому, що пишемо ми зліва направо, а біти нумеруємо справа наліво. Переплутаєте — картинка вийде дзеркальною групами по вісім, і це навдивовижу впізнаваний баг.
 
-`char` is a number. `'0' + 3` is `'3'` — handy for printing a one-digit index without a full formatter.
+Виставити й зняти цей біт — та сама трійка з Lab 2, у якої нарешті з'явилась робота: `mem[a] |= (1u << n)` і `mem[a] &= ~(1u << n)`.
 
-### 4. Sort is nested loops and a swap
+### 3. Рядки: довжина за домовленістю
 
-**Bubble sort:** adjacent swaps, outer pass `n` times. **Insertion sort:** take the next element, slide it left into a sorted prefix. Both are O(n²). Both fit on a page. You will sort a guest region in C++ (`sort <lo> <hi>`) and optionally as bytecode (Stretch — tedious, educational).
+**C-рядок** — це `char s[] = "hi";`, тобто `{ 'h', 'i', '\0' }`. `strlen` іде, поки не натрапить на нуль. Якщо нуля немає — він іде в порожнечу (і ASan це помітить). У `ember` рядки гостя — ті самі байти, вони лежать у регіоні даних на `0x800`. У `OUTS` має бути **стеля** (256 байтів, як каже [ISA.uk.md](ISA.uk.md)), а не лише `'\0'`, бо програма-гість, яка забула термінатор, — це **ваша** проблема, яку треба пережити, а не привід вивалити в термінал 4 КБ відеопам'яті.
 
-Swap is the Lab 1 scratch `tmp = a; a = b; b = tmp` — or a function `void swap(Byte& a, Byte& b)` if you have already seen references; otherwise `void swap(Byte* a, Byte* b)`.
+`char` — це число. `'0' + 3` дає `'3'`; зручно, коли треба надрукувати однозначний індекс без повноцінного форматування.
 
-Linear search you have (Lab 4). Run it on the framebuffer: "find the first lit pixel."
+### 4. Сортування — це вкладені цикли й обмін
 
-### Prove it to yourself (notes §§1–3)
+**Бульбашка:** міняємо місцями сусідів, зовнішній прохід повторюється `n` разів. **Вставками:** беремо наступний елемент і посуваємо його вліво у вже відсортований початок. Обидва O(n²). Обидва вміщаються на сторінку. Сортувати ділянку пам'яті гостя ви будете на C++ (`sort <lo> <hi>`), а за бажанням і байткодом (Stretch — марудно, але повчально).
 
-1. `int a[] = {1,2,3}; std::cout << sizeof(a) << ' ' << sizeof(&a[0]);` — why different?
-2. Fill `int m[2][3]`, print `m[1][2]` and the equivalent `*(&m[0][0] + 1*3 + 2)`.
-3. `char s[] = "AB"; s[2] = 'X';` then `std::cout << s;` with ASan — what happens?
-4. Bubble-sort `{4, 1, 3, 2}` on paper for one pass, then run it.
-5. On paper: a 16×2 display packed into `Byte pixels[4]`. Which byte and which bit is `(9, 1)`? Check with the formula, then with the real `0xA00 + y*8 + x/8` on a 64×32 screen.
+Обмін — це `tmp = a; a = b; b = tmp` із чернетки першої лаби, або функція `void swap(Byte& a, Byte& b)`, якщо посилання вам уже траплялись; якщо ні — `void swap(Byte* a, Byte* b)`.
+
+Лінійний пошук у вас уже є (Lab 4). Пустіть його по відеопам'яті: «знайти перший засвічений піксель».
+
+### Перевірте самі (notes §§1–3)
+
+1. `int a[] = {1,2,3}; std::cout << sizeof(a) << ' ' << sizeof(&a[0]);` — чому різне?
+2. Заповніть `int m[2][3]`, надрукуйте `m[1][2]` і рівноцінне `*(&m[0][0] + 1*3 + 2)`.
+3. `char s[] = "AB"; s[2] = 'X';`, потім `std::cout << s;` з ASan — що станеться?
+4. Проженіть на папері один прохід бульбашки по `{4, 1, 3, 2}`, потім запустіть код.
+5. На папері: екран 16×2, упакований у `Byte pixels[4]`. Який байт і який біт відповідають `(9, 1)`? Порахуйте за формулою, потім перевірте на справжньому `0xA00 + y*8 + x/8` для екрана 64×32.
 
 ---
 
-## Project step: pixels, text, and a sorted row
+## Крок проєкту: пікселі, текст і відсортований рядок
 
-### Display contract
+### Контракт екрана
 
-Fixed, from [ISA.md §7](ISA.md#7-the-display-is-memory) — do not invent your own:
+Він фіксований, з [ISA.uk.md §7](ISA.uk.md#7-екран-це-память) — свого не вигадуйте:
 
-- **64×32** pixels, **1 bit per pixel**, **256 bytes**, at `VRAM_LO = 0xA00`.
-- It lives **inside `Memory`**, not in a separate host array. There is no `Byte pixels[]`. There is `mem.data[0xA00 .. 0xAFF]`.
-- `show` — print the screen in the terminal (`#` or `█` for a lit pixel, space otherwise).
-- Opcodes `0x40`–`0x43`: `CLS`, `PLOT` (`x = A`, `y = B`; off-screen sets `C` and changes nothing), `SHOW`.
+- **64×32** пікселі, **по біту на піксель**, **256 байтів**, починаючи з `VRAM_LO = 0xA00`.
+- Живе він **усередині `Memory`**, а не в окремому масиві на хості. Ніякого `Byte pixels[]` немає. Є `mem.data[0xA00 .. 0xAFF]`.
+- `show` — надрукувати екран у терміналі (`#` або `█` для засвіченого пікселя, пробіл для решти).
+- Опкоди `0x40`–`0x43`: `CLS`, `PLOT` (`x = A`, `y = B`; за межами екрана виставляє `C` і нічого не змінює), `SHOW`.
 
-A byte per pixel would cost 2048 bytes — half the machine — for a screen that
-only needs 256. That is not a style preference; that is why Lab 2 existed.
+Байт на піксель коштував би 2048 байтів — половину машини — заради екрана, якому досить 256. Це не питання смаку; це і є відповідь на питання, навіщо була Lab 2.
 
-### Milestones
+### Етапи
 
-**M1 — The framebuffer.**
-`show()` is **given** — it is a nested loop like Lab 1's dump, and it is scaffolding, not the idea:
+**M1 — відеопам'ять.**
+`show()` **дано** — це вкладений цикл, як дамп із першої лаби, тобто риштування, а не ідея:
 
 ```cpp
-// GIVEN. Draw VRAM into the terminal.
+// ДАНО. Намалювати відеопам'ять у терміналі.
 void show(const Memory& mem) {
     for (int y = 0; y < 32; ++y) {
         for (int x = 0; x < 64; ++x) {
@@ -113,118 +108,109 @@ void show(const Memory& mem) {
     }
 }
 
-// YOURS. The same formula, backwards: set the bit instead of reading it.
-// Reject x >= 64 or y >= 32.
+// ВАШЕ. Та сама формула навпаки: не читати біт, а виставити його.
+// Відхилити x >= 64 або y >= 32.
 void plot(Memory& mem, int x, int y);
-void clear(Memory& mem);      // 256 bytes of zero
+void clear(Memory& mem);      // 256 байтів нулів
 ```
 
-`plot` is three lines and it *is* the lab. Read `show` until you can say which
-part of it is the stride, which is the byte, and which is the bit — then write
-`plot` without looking back at it.
+`plot` — це три рядки, і саме він **і є** лаба. Читайте `show`, поки не зможете сказати, де там крок рядка, де байт, а де біт — і тоді пишіть `plot`, більше в нього не підглядаючи.
 
-Draw a border from C++ so `show` has something to photograph.
+Намалюйте рамку з C++, щоб `show` було що показати.
 
-**M2 — `CLS` / `PLOT` / `SHOW` as instructions.**
-A poked program that plots three pixels and `HALT`s. `run`, then `show`.
+**M2 — `CLS` / `PLOT` / `SHOW` як інструкції.**
+Покладена в пам'ять програма, яка ставить три пікселі й робить `HALT`. `run`, потім `show`.
 
-**M3 — Prove the screen is memory.**
-Two things, and they matter more than M2:
+**M3 — доведіть, що екран це пам'ять.**
+Дві речі, і вони важливіші за M2:
 
-1. Run the second program in [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against): `CLS`, `LOADI A, 0x80`, `LOADH H, 0x0A00`, `STORE [H], A`, `SHOW`. One pixel in the top-left corner, drawn with **no `PLOT` at all**.
-2. Draw the border from M1, then `dump` and paste the lines from `0xA00`. Point at one byte and say which eight pixels it is.
+1. Проженіть другу програму з [ISA.uk.md §9](ISA.uk.md#9-дві-програми-щоб-перевірити-себе): `CLS`, `LOADI A, 0x80`, `LOADH H, 0x0A00`, `STORE [H], A`, `SHOW`. Один піксель у лівому верхньому куті, намальований **узагалі без `PLOT`**.
+2. Намалюйте рамку з M1, зробіть `dump` і вставте рядки починаючи з `0xA00`. Покажіть пальцем на один байт і скажіть, які це вісім пікселів.
 
-If the pixel lands anywhere but the corner, exactly one of three things is wrong: the memory map, your bit order, or `show`. Now you know which three to check.
+Якщо піксель опинився не в куті, неправильне рівно одне з трьох: карта пам'яті, порядок бітів або `show`. Тепер ви знаєте, які три речі перевіряти.
 
-**M4 — Strings.**
-`OUTS` (`0x04`) prints a guest C-string with a cap. Poke `HELLO\0` at `0x800` and print it. Do **not** use `std::string` for the guest; you may use it for the host CLI.
+**M4 — рядки.**
+`OUTS` (`0x04`) друкує C-рядок гостя зі стелею. Покладіть `HELLO\0` на `0x800` і надрукуйте. `std::string` для гостя брати **не можна**; для консолі на хості — будь ласка.
 
-**M5 — Search a region.**
-`find` already exists (Lab 4). Point it at the data region, and then at VRAM to
-find the first non-zero byte of the picture you drew. Two very different-looking
-questions, one loop.
+**M5 — пошук по ділянці.**
+`find` у вас уже є (Lab 4). Наведіть його на регіон даних, а потім на відеопам'ять — знайти перший ненульовий байт намальованої картинки. Два питання, які виглядають зовсім по-різному, а цикл один.
 
-Sorting moved to **Advanced** — it is a good exercise and it is not what this lab
-is about. Take it if M1–M4 came out fast.
+Сортування переїхало в **Advanced** — вправа хороша, але лаба не про неї. Беріть, якщо M1–M4 пішли швидко.
 
-### Definition of done
+### Коли вважати готовим
 
-- 64×32 1-bit display **inside guest memory** at `0xA00`; `show`, `CLS`, `PLOT`, `SHOW`.
-- One pixel lit with `STORE [H], A` and no `PLOT`, plus a dump of VRAM with one byte explained.
-- Guest C-string print with a cap; a `HELLO` demo.
-- `find` run over both the data region and VRAM.
-- The byte/bit address formula in the README, in one block.
-- Repo tagged `lab-05`.
+- Екран 64×32 по біту на піксель **усередині пам'яті гостя** на `0xA00`; `show`, `CLS`, `PLOT`, `SHOW`.
+- Один піксель, засвічений через `STORE [H], A` без `PLOT`, і дамп відеопам'яті з поясненим байтом.
+- Друк C-рядка гостя зі стелею; демонстрація на `HELLO`.
+- `find`, прогнаний і по регіону даних, і по відеопам'яті.
+- Формула «адреса байта / номер біта» в README, одним блоком.
+- Тег `lab-05`.
 
 ---
 
-## Levels
+## Рівні
 
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
 
-### Basic — "there is a screen" (~8–10 hours)
-- `plot` and `clear` written against the given `show`, using the formula from theory §2. Off-screen coordinates rejected.
-- VRAM lives **in `ember` memory** at `0xA00`, 256 bytes, one bit per pixel — no separate host array.
-- `CLS`, `PLOT`, `SHOW` as opcodes; a border drawn from C++; a poked program that plots three pixels.
-- Repo tagged `lab-05`.
+### Basic — «екран є» (~8–10 годин)
+- `plot` і `clear`, написані проти даного `show`, за формулою з теорії §2. Координати за межами екрана відхиляються.
+- Відеопам'ять живе **в пам'яті `ember`** на `0xA00`: 256 байтів, по біту на піксель, без окремого масиву на хості.
+- `CLS`, `PLOT`, `SHOW` як опкоди; рамка, намальована з C++; покладена програма, яка ставить три пікселі.
+- Тег `lab-05`.
 
-### Standard — target (~13–15 hours)
-- Everything in **Definition of done** above.
-- The proof that the screen is memory: light the top-left pixel with `STORE [H], A` and no `PLOT` ([ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against)), then dump `0xA00` and point at the byte you wrote.
-- `OUTS` with both a `' '` check **and** a cap; `HELLO` printed from `0x800`.
-- `find` run over the data region and over VRAM.
-- The byte/bit formula in the README, in one block.
+### Standard — цільовий (~13–15 годин)
+- Усе з розділу **Коли вважати готовим**.
+- Доказ, що екран це пам'ять: засвітити лівий верхній піксель через `STORE [H], A` без `PLOT` ([ISA.uk.md §9](ISA.uk.md#9-дві-програми-щоб-перевірити-себе)), потім зробити дамп `0xA00` і показати записаний байт.
+- `OUTS` із перевіркою на `'\0'` **і** зі стелею; `HELLO`, надрукований з `0x800`.
+- `find`, прогнаний по регіону даних і по відеопам'яті.
+- Формула «байт і біт» у README, одним блоком.
 
-### Advanced — distinction (~19–21 hours)
-- Everything above, plus `sort <lo> <hi>` in place on guest memory, with before/after dumps.
-- The sort visualised as bars on the display, one `SHOW` per pass.
-- A bouncing pixel animated from a host loop, or `rowmin <y>`.
+### Advanced — відмінно (~19–21 година)
+- Усе вище плюс `sort <lo> <hi>` на місці в пам'яті гостя, з дампами до і після.
+- Сортування, показане стовпчиками на екрані, по одному `SHOW` на прохід.
+- Піксель, що стрибає, анімований циклом на хості, або `rowmin <y>`.
 
 ---
 
-## Deliverable checklist
+## Чекліст здачі
 
-- [ ] VRAM at `0xA00` inside `Memory`; `show`; bounds-checked `plot`.
-- [ ] `CLS`/`PLOT`/`SHOW` opcodes; three-pixel program.
-- [ ] A pixel drawn with `STORE [H], A`; VRAM dump in the README.
-- [ ] `OUTS` with `'\0'` and a cap.
-- [ ] `find` over data and over VRAM; evidence in the README.
-- [ ] Git tag `lab-05`.
-
----
-
-## Reflection — explain it at the whiteboard
-
-1. Write `buf[i]` as pointer arithmetic. Why is `sizeof(buf)` not `sizeof(ptr)`?
-2. Why is `index = y * 8 + x / 8`, not `x * 32 + y`? What breaks if you swap them?
-3. Why `7 - (x % 8)` and not `x % 8`? Draw the byte `0x80` as eight pixels.
-4. Why must `OUTS` have a cap as well as `'\0'`?
-5. Bubble vs insertion: which swaps more on an already-sorted array? Why does that matter on 8 bytes vs 8 million?
-6. How many bytes is a 64×32 1-bit display? 8-bit gray? Why did Lab 2 belong in this lab?
-7. A guest program can `STORE` into VRAM. It can also `STORE` into its own code. What stops it? What stops a real program on your laptop?
+- [ ] Відеопам'ять на `0xA00` усередині `Memory`; `show`; `plot` із перевіркою меж.
+- [ ] Опкоди `CLS`/`PLOT`/`SHOW`; програма на три пікселі.
+- [ ] Піксель, намальований через `STORE [H], A`; дамп відеопам'яті в README.
+- [ ] `OUTS` із `'\0'` і зі стелею.
+- [ ] `find` по даних і по відеопам'яті; докази в README.
+- [ ] Тег `lab-05`.
 
 ---
 
-## Stretch
+## На захисті — поясніть біля дошки
 
-`sort <lo> <hi>`, bubble or insertion, in place on guest memory: put 8 bytes at `0x800`, dump, sort, dump again, paste both. Then draw `mem[lo+i]` as a bar and `show` after each pass — a sort you can watch.
-
-Animate a bouncing pixel (`run` in a host loop that `show`s every N steps — a poor man's game loop). Visualize sort as bars. Optional: `rowmin <y>` prints the leftmost lit pixel in that row.
+1. Запишіть `buf[i]` через арифметику вказівників. Чому `sizeof(buf)` це не `sizeof(вказівника)`?
+2. Чому `індекс = y * 8 + x / 8`, а не `x * 32 + y`? Що зламається, якщо їх поміняти?
+3. Чому `7 - (x % 8)`, а не просто `x % 8`? Намалюйте байт `0x80` як вісім пікселів.
+4. Чому в `OUTS` потрібна стеля, а не лише `'\0'`?
+5. Бульбашка проти вставок: котра робить більше обмінів на вже відсортованому масиві? Чому це неважливо на 8 байтах і важливо на 8 мільйонах?
+6. Скільки байтів займає екран 64×32 по біту на піксель? А по вісім бітів на піксель? Чому Lab 2 насправді була про цю лабу?
+7. Програма-гість може зробити `STORE` у відеопам'ять. Може й у власний код. Що їй завадить? А що завадить справжній програмі на вашому ноутбуці?
 
 ---
 
-## Resources
+## Якщо встигаєте
 
-**Watch**
+`sort <lo> <hi>`, бульбашкою або вставками, на місці в пам'яті гостя: покладіть 8 байтів на `0x800`, зробіть дамп, відсортуйте, зробіть дамп знову, вставте обидва. Потім малюйте `mem[lo+i]` стовпчиком і робіть `show` після кожного проходу — сортування, за яким можна спостерігати.
 
-- Ben Eater — [A simple video card](https://www.youtube.com/watch?v=l7rce6IQDWs) — a *real* framebuffer, read out of RAM by a clock, one pixel at a time. Watch the first fifteen minutes: it is your `show()` in hardware.
+Анімуйте піксель, що стрибає (`run` у циклі на хості, який кожні N кроків робить `show` — ігровий цикл для бідних). Покажіть сортування стовпчиками. За бажанням: `rowmin <y>`, який друкує найлівіший засвічений піксель у рядку.
 
-**Read**
+---
 
-- learncpp.com — [Arrays](https://www.learncpp.com/cpp-tutorial/introduction-to-arrays/), [C-style strings](https://www.learncpp.com/cpp-tutorial/c-style-strings/).
-- Wikipedia — [Row- and column-major](https://en.wikipedia.org/wiki/Row-_and_column-major_order), [Bubble sort](https://en.wikipedia.org/wiki/Bubble_sort) (the GIF).
-- [CHIP-8 technical reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) — §2.4 *Display*. A real 1970s virtual machine with a 64×32 monochrome screen, described in one page. Ours is deliberately in that family.
+## Що почитати й подивитись
+
+**Подивитись**
+
+- Ben Eater — [A simple video card](https://www.youtube.com/watch?v=l7rce6IQDWs) — **справжня** відеопам'ять, яку тактовий генератор вичитує з ОЗП по одному пікселю. Подивіться перші п'ятнадцять хвилин: це ваш `show()` у залізі.
+
+**Почитати**
+
+- learncpp.com — [масиви](https://www.learncpp.com/cpp-tutorial/introduction-to-arrays/), [C-рядки](https://www.learncpp.com/cpp-tutorial/c-style-strings/).
+- Вікіпедія — [рядковий і стовпцевий порядок](https://en.wikipedia.org/wiki/Row-_and_column-major_order), [сортування бульбашкою](https://uk.wikipedia.org/wiki/%D0%A1%D0%BE%D1%80%D1%82%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F_%D0%B1%D1%83%D0%BB%D1%8C%D0%B1%D0%B0%D1%88%D0%BA%D0%BE%D1%8E) (заради анімації).
+- [CHIP-8 technical reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) — §2.4 *Display*. Справжня віртуальна машина 1970-х із монохромним екраном 64×32, описана на одній сторінці. Наша навмисно з тієї ж родини.

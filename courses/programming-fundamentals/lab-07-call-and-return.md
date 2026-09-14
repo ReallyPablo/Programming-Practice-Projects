@@ -1,83 +1,83 @@
-# Lab 07 — Call and Return: Functions, the Stack, and Recursion
+# Лаба 07 — Виклик і повернення: функції, стек і рекурсія
 
-> "A function is a named jump with a promise to come back. The stack is how the promise is kept."
+> «Функція — це іменований стрибок з обіцянкою повернутись. Стек — це те, як обіцянку дотримують.»
 
-**Weeks:** 13–14 · **Language focus:** functions, pass-by-value vs pointer vs reference, headers and translation units, the call stack, recursion · **Project step:** a `Stack` ADT, `SP`, `PUSH`/`POP`, `CALL`/`RET`, recursive factorial in bytecode · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 06](lab-06-named-bundles.md) · **Notes:** [theory + experiments](lab-07-call-and-return.notes.md)
-
----
-
-## This lab's feature
-
-You have been writing functions since Lab 1 (`main`, `dump`, `step`). This week they become a **subject**: a function has a name, parameters, a return value or `void`, and a **frame** on the call stack. Passing `CPU` by value would copy the machine every `step` — so you pass `CPU&`. Passing `int x` copies the number; the callee cannot change the caller's `x`. That is not a style rule. It is how the stack works.
-
-Then you implement the same idea *inside* ember. The machine grows a stack pointer **`SP`** and a stack region at `0xF00`–`0xFFF` ([ISA.md §2](ISA.md#2-memory-map)). **`PUSH A`** puts a byte there; **`POP A`** takes it back. **`CALL addr`** pushes the return address and sets `PC = addr`. **`RET`** pops it back. Recursion is a function that `CALL`s itself — it works because each call's data sits at a different place on the stack, and it stops working when the stack runs out, which you will also show.
-
-Functions, headers, ADTs and recursion are one lab here because they are one mechanism. The **ADT** is `Stack`: `push` / `pop` / `empty` / `full`, array or linked — you pick, you hide the representation behind `stack.hpp`.
-
-You write **factorial** this week, not Fibonacci. Recursive `fact(5)` is about fifteen instructions; recursive `fib` is about forty, and hand-assembling forty bytes with hand-computed jump targets teaches hexadecimal arithmetic, not recursion. `fib` is [Lab 8](lab-08-give-it-a-language.md)'s deliverable, written in the assembly language you are two weeks away from having. The mechanism you build now is what makes it possible.
+**Тижні:** 13–14 · **Про мову:** функції, передача за значенням, вказівником і посиланням, заголовки й одиниці трансляції, стек викликів, рекурсія · **Крок проєкту:** `Stack` як окремий тип, `SP`, `PUSH`/`POP`, `CALL`/`RET`, рекурсивний факторіал у байткоді · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Попередня:** [Лаба 06](lab-06-named-bundles.md) · **Notes:** [теорія і досліди](lab-07-call-and-return.notes.md)
 
 ---
 
-## Theory
+## Про що ця лаба
 
-### 1. A call is a jump that remembers
+Функції ви пишете з першої лаби (`main`, `dump`, `step`). Цього тижня вони стають **темою**: у функції є ім'я, параметри, значення, яке вона повертає (або `void`), і **кадр** на стеку викликів. Передавати `CPU` за значенням означало б копіювати всю машину на кожному `step` — тому передають `CPU&`. Передати `int x` означає передати копію числа, і викликана функція не може змінити `x` у того, хто викликав. Це не правило стилю. Це те, як влаштований стек.
 
-When C++ executes `y = add(2, 3)`:
+А потім ви реалізуєте ту саму ідею **всередині** `ember`. У машини з'являється вказівник стека **`SP`** і регіон стека `0xF00`–`0xFFF` ([ISA.uk.md §2](ISA.uk.md#2-карта-памяті)). **`PUSH A`** кладе туди байт, **`POP A`** забирає його назад. **`CALL addr`** кладе адресу повернення й ставить `PC = addr`. **`RET`** знімає її назад. Рекурсія — це функція, яка робить `CALL` сама собі; вона працює, бо дані кожного виклику лежать на стеку в різних місцях, і перестає працювати, коли стек закінчується — це ви теж покажете.
 
-1. Place arguments where the callee expects them (registers and/or stack — ABI).
-2. Place a **return address** (the instruction after the call).
-3. Jump to `add`.
-4. `add` runs, leaves a result, jumps to the return address.
+Функції, заголовки, абстрактні типи даних і рекурсія зібрані в одну лабу, бо це один механізм. Абстрактний тип тут — `Stack`: `push` / `pop` / `empty` / `full`, масив або зв'язані вузли — обираєте ви, а представлення ховаєте за `stack.hpp`.
 
-You do not need the full x86-64 ABI. You need: **the callee has its own locals**; they die when it returns; the caller's locals are intact. Recursion works because **each call has its own frame**. Draw three frames for `fact(3)` → `fact(2)` → `fact(1)`.
+Цього тижня ви пишете **факторіал**, а не Фібоначчі. Рекурсивний `fact(5)` — це близько п'ятнадцяти інструкцій, рекурсивний `fib` — близько сорока, а збирати сорок байтів руками, рахуючи адреси переходів у голові, вчить шістнадцятковій арифметиці, а не рекурсії. `fib` здається в [Лабі 8](lab-08-give-it-a-language.md), уже мовою асемблера, до якої лишилось два тижні. Механізм, який ви робите зараз, — це те, що зробить його можливим.
 
-### 2. How values get in and out
+---
 
-| Passing | Callee sees | Can modify caller's object? | Use |
+## Теорія
+
+### 1. Виклик — це стрибок, який пам'ятає
+
+Коли C++ виконує `y = add(2, 3)`:
+
+1. Кладе аргументи туди, де їх чекає викликана функція (регістри та/або стек — це називається ABI).
+2. Кладе **адресу повернення** — інструкцію, наступну після виклику.
+3. Стрибає в `add`.
+4. `add` виконується, лишає результат і стрибає на адресу повернення.
+
+Уся ABI x86-64 вам не потрібна. Потрібне ось що: **у викликаної функції свої локальні змінні**, вони помирають разом із поверненням, а локальні змінні того, хто викликав, лишаються цілими. Рекурсія працює тому, що **в кожного виклику свій кадр**. Намалюйте три кадри для `fact(3)` → `fact(2)` → `fact(1)`.
+
+### 2. Як значення потрапляють усередину й назовні
+
+| Як передаємо | Що бачить функція | Чи може змінити об'єкт того, хто викликав | Коли брати |
 |---|---|---|---|
-| `T x` | a copy | no | small values (`uint8_t`, `int`) |
-| `T* p` | an address | yes, via `*p` | optional / arrays (decayed) |
-| `T& r` | an alias | yes | required object, `CPU&` |
-| `const T&` | an alias, read-only | no | large read-only (later) |
+| `T x` | копію | ні | маленькі значення (`uint8_t`, `int`) |
+| `T* p` | адресу | так, через `*p` | коли об'єкта може не бути; масиви |
+| `T& r` | псевдонім | так | об'єкт обов'язковий: `CPU&` |
+| `const T&` | псевдонім лише для читання | ні | великий об'єкт, який лише читають (згодом) |
 
-**Return:** `return x;` copies (or moves) a value to the caller. `void` returns nothing. Prefer returning a value when there is one result (`Byte alu_add(...)`). Use out-parameters (`bool& carry`) when you must return two things and haven't made a `struct AluResult` yet. Do **not** return through globals.
+**Повернення:** `return x;` копіює (або переміщує) значення тому, хто викликав. `void` не повертає нічого. Коли результат один — повертайте значення (`Byte alu_add(...)`). Вихідні параметри (`bool& carry`) беріть тоді, коли треба повернути дві речі, а `struct AluResult` ви ще не завели. Через глобальні змінні результат **не** повертають.
 
-**Overload** (same name, different parameter types) is resolved at compile time. Fine for `dump(const Memory&)` vs `dump(const CPU&)`. Do not overload as a party trick.
+**Перевантаження** (те саме ім'я, різні типи параметрів) розв'язується на етапі компіляції. Для `dump(const Memory&)` проти `dump(const CPU&)` це доречно. Не перевантажуйте заради ефекту.
 
-### 3. Recursion needs a base case and a smaller case
+### 3. Рекурсії потрібні базовий випадок і менший випадок
 
 ```cpp
 int fact(int n) {
-    if (n <= 1) return 1;       // base
-    return n * fact(n - 1);     // smaller
+    if (n <= 1) return 1;       // база
+    return n * fact(n - 1);     // менший випадок
 }
 ```
 
-Without a base case, stack overflow. Tail recursion is a special case compilers *may* turn into a loop; do not count on it.
+Без базового випадку стек переповниться. Хвостову рекурсію компілятор **може** перетворити на цикл, але розраховувати на це не варто.
 
-Guest `fact`: `CALL` itself with `A` holding `n`. The machine gives you a stack for return addresses; **everything else you must save yourself**. `fact` needs `n` back after the recursive call has finished stomping on `A`, so it pushes it first:
+`fact` усередині гостя: робить `CALL` сам собі, тримаючи `n` в `A`. Машина дає вам стек для адрес повернення; **усе інше ви зберігаєте самі**. `fact` потрібне `n` після того, як рекурсивний виклик затопче `A`, — тому він кладе його на стек заздалегідь:
 
 ```txt
-fact:   ...                 ; if n is 0 or 1, jump to base
-        PUSH  A             ; save n -- the call will destroy A
+fact:   ...                 ; якщо n це 0 або 1 — на base
+        PUSH  A             ; зберегти n: виклик знищить A
         DEC   A             ; n - 1
         CALL  fact          ; A = fact(n-1)
-        POP   B             ; B = the n we saved
+        POP   B             ; B = збережене n
         MUL   A, B          ; A = fact(n-1) * n
         RET
 base:   LOADI A, 1
         RET
 ```
 
-That `PUSH` before the call and `POP` after it *is* what a stack frame is. Real compilers emit the same two instructions for the same reason; they just also have a name for the region between them.
+Оцей `PUSH` перед викликом і `POP` після нього **і є** кадр стека. Справжні компілятори видають ті самі дві інструкції з тієї самої причини — просто в них ще є назва для проміжку між ними.
 
-The full listing, with addresses and assembled bytes, is **given** in [ISA.md §6](ISA.md#a-worked-example). Type it in, run it, trace it. You are not meant to derive thirty bytes of hexadecimal — you are meant to watch a stack grow and shrink.
+Повний лістинг з адресами й зібраними байтами **дано** в [ISA.uk.md §6](ISA.uk.md#розібраний-приклад). Наберіть, запустіть, простежте. Виводити тридцять байтів шістнадцяткових від руки — не завдання цієї лаби; завдання — побачити, як стек росте й спадає.
 
-The calling convention — argument in `A`, result in `A`, `B` and `H` caller-saved — is written down once, in [ISA.md §6](ISA.md#calling-convention). Restate it in your own README. Two functions that disagree about who saves `B` is the defining bug of this lab, and it is invisible until you can point at the rule.
+Конвенція виклику — аргумент в `A`, результат в `A`, `B` і `H` рятує той, хто викликає, — записана один раз, у [ISA.uk.md §6](ISA.uk.md#конвенція-виклику). Перекажіть її своїми словами у власному README. Дві функції, які розійшлись у питанні «хто зберігає `B`», — це визначальний баг цієї лаби, і його не видно, поки правило не записане так, щоб на нього можна було показати пальцем.
 
-Fibonacci without memoisation is exponentially slow: `fib(10)` is fine, `fib(40)` is a lecture on why stacks and time both matter. You will write it in [Lab 8](lab-08-give-it-a-language.md), in text, with labels the assembler resolves for you.
+Фібоначчі без запам'ятовування росте експоненційно: `fib(10)` ще нічого, а `fib(40)` — це лекція про те, чому важать і стек, і час. Писати його ви будете в [Лабі 8](lab-08-give-it-a-language.md), текстом, із мітками, які асемблер порахує за вас.
 
-### 4. Headers are promises; `.cpp` files keep them
+### 4. Заголовок — це обіцянка, а `.cpp` її виконує
 
 ```cpp
 // stack.hpp
@@ -86,144 +86,140 @@ Fibonacci without memoisation is exponentially slow: `fib(10)` is fine, `fib(40)
 struct Stack {
     static constexpr int CAP = 64;
     std::uint16_t data[CAP]{};
-    int top = -1;               // or a linked node — hidden if you use opaque pointers
+    int top = -1;               // або зв'язаний вузол — сховати можна за непрозорим вказівником
 };
 bool push(Stack& s, std::uint16_t v);
 bool pop(Stack& s, std::uint16_t& out);
 ```
 
-`#include "stack.hpp"` copies the promise into each `.cpp`. **One definition** of `push` lives in `stack.cpp`. Circular includes: `#pragma once` and "include what you use."
+`#include "stack.hpp"` копіює обіцянку в кожен `.cpp`. **Одне визначення** `push` живе у `stack.cpp`. Проти кругових включень — `#pragma once` і правило «включай те, чим користуєшся».
 
-### 5. The stack as an ADT
+### 5. Стек як абстрактний тип даних
 
-**LIFO:** last in, first out. `push` / `pop`. Overflow if `top == CAP-1`; underflow if empty. A **queue** is FIFO — implement it only if you need it (Stretch). Representation: array (vector) or linked nodes. The rest of `cpu.cpp` should not touch `data[]`. That hiding is what "abstract data type" meant.
+**LIFO:** останнім прийшов — першим пішов. `push` / `pop`. Переповнення, якщо `top == CAP-1`; спустошення, якщо стек порожній. **Черга** — це FIFO; робіть її, тільки якщо вона вам справді потрібна (Stretch). Представлення: масив (чи вектор) або зв'язані вузли. Решта `cpu.cpp` не повинна чіпати `data[]`. Оце приховування і мали на увазі, коли казали «абстрактний тип даних».
 
-### Prove it to yourself (notes §§1–3)
+### Перевірте самі (notes §§1–3)
 
-1. `void inc(int x) { x++; }` vs `void inc(int& x) { x++; }` vs `void inc(int* p) { (*p)++; }`.
-2. Recursive `fact(5)` — print `n` on the way in and out.
-3. `int f(int n) { return f(n); }` — compile, run with a small ulimit or just know it dies; don't paste a 1000-line ASan stack unless you want to.
-4. Two `.cpp` files calling the same `push` — link them; then duplicate `push` in both and read the linker error.
+1. `void inc(int x) { x++; }` проти `void inc(int& x) { x++; }` проти `void inc(int* p) { (*p)++; }`.
+2. Рекурсивний `fact(5)` — друкуйте `n` на вході й на виході.
+3. `int f(int n) { return f(n); }` — зберіть і запустіть із маленьким `ulimit` або просто знайте, що воно помре; вставляти тисячу рядків стека від ASan не обов'язково.
+4. Два файли `.cpp`, які викликають один `push` — злінкуйте їх; потім продублюйте `push` в обох і прочитайте помилку лінкера.
 
 ---
 
-## Project step: CALL, RET, and fib.asm (still poked)
+## Крок проєкту: CALL, RET і кадр, який видно
 
-### Milestones
+### Етапи
 
-**M1 — `SP`, `PUSH`, `POP`, and the `Stack` ADT.**
-`SP` starts at `0xFFF`; the stack region is `0xF00`–`0xFFF`. Implement `PUSH A`, `POP A`, `PUSH B`, `POP B` ([ISA.md](ISA.md) `0x50`–`0x53`), empty-descending as the table describes.
+**M1 — `SP`, `PUSH`, `POP` і `Stack` як тип.**
+`SP` стартує з `0xFFF`; регіон стека — `0xF00`–`0xFFF`. Реалізуйте `PUSH A`, `POP A`, `PUSH B`, `POP B` ([ISA.uk.md](ISA.uk.md), `0x50`–`0x53`), «порожній спадний», як описано в таблиці.
 
-Put the push/pop logic behind an ADT in `stack.hpp` / `stack.cpp` — `push`/`pop` returning `bool` for success — so that `cpu.cpp` never touches the stack representation directly. Add an `ember` command `stack` that prints `SP` and the top few bytes, so you can see it.
+Логіку `push`/`pop` сховайте за абстрактним типом у `stack.hpp` / `stack.cpp` — обидві повертають `bool` як ознаку успіху — щоб `cpu.cpp` ніколи не чіпав представлення стека напряму. Додайте в `ember` команду `stack`, яка друкує `SP` і кілька верхніх байтів, щоб стек було видно.
 
-Overflow (below `STACK_LO`) and underflow (above `STACK_HI`) stop the machine with **your** message. Never a host crash, never a silent wrap.
+Переповнення (нижче за `STACK_LO`) і спустошення (вище за `STACK_HI`) зупиняють машину **вашим** повідомленням. Ніколи — падінням процесу і ніколи — тихим загортанням.
 
 **M2 — `CALL` / `RET`.**
-Exactly as [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly) specifies: push low byte then high byte of `PC + 3`, pop high then low. A program: `CALL printA`, `HALT`; `printA: OUT`, `RET`. Trace it in the README — one line per step with `PC`, `SP`, and the two stack bytes. Say out loud why the pushed address is `PC + 3` and not the address of the `CALL` itself.
+Рівно так, як описано в [ISA.uk.md §6](ISA.uk.md#6-як-саме-працюють-call-і-ret): покласти молодший байт `PC + 3`, потім старший; знімати спершу старший, потім молодший. Програма: `CALL printA`, `HALT`; `printA: OUT`, `RET`. Простежте її в README — по рядку на крок, у ньому `PC`, `SP` і два байти на стеку. І скажіть уголос, чому кладеться `PC + 3`, а не адреса самого `CALL`.
 
-**M3 — Recursion: `fact`.**
-Implement `MUL` (`0x1B`) — one line in your ALU — then poke in the listing from [ISA.md §6](ISA.md#a-worked-example) and run it.
+**M3 — рекурсія: `fact`.**
+Реалізуйте `MUL` (`0x1B`) — один рядок у вашому ALU — потім покладіть у пам'ять лістинг із [ISA.uk.md §6](ISA.uk.md#розібраний-приклад) і запустіть його.
 
-- `fact(5)` prints `120`, in 60 steps, and `SP` is back at `0xFFF`.
-- `fact(0)` and `fact(1)` both print `1`. Change the first byte pair and check.
-- Trace it: one line per `CALL` and `RET` with `SP` and `A`. How deep does it go?
+- `fact(5)` друкує `120` за 60 кроків, і `SP` повертається в `0xFFF`.
+- `fact(0)` і `fact(1)` обидва друкують `1`. Змініть першу пару байтів і перевірте.
+- Простежте: по рядку на кожен `CALL` і `RET`, у рядку `SP` і `A`. Наскільки глибоко воно провалюється?
 
-Then make it yours — one of these, your pick, written up in the README:
+Далі зробіть його своїм — одне з трьох на вибір, з описом у README:
 
-- Change it to count down and print each `n` on the way in and out, so the trace matches the C++ `fact` from the notes.
-- Remove the `PUSH A` / `POP B` pair and explain what it prints and why.
-- Make `fact(6)` and explain the answer (720 does not fit in a byte — what does `C` say?).
+- Перепишіть так, щоб він друкував кожне `n` на вході й на виході, і трейс збігся з `fact` на C++ із notes.
+- Приберіть пару `PUSH A` / `POP B` і поясніть, що воно надрукує і чому.
+- Порахуйте `fact(6)` і поясніть відповідь: 720 не влазить у байт — що каже `C`?
 
-Finally, **one deliberate overflow**: delete the base case, or shrink the stack region. It must be caught by *your* error message, not by a host crash.
+І нарешті **одне навмисне переповнення**: приберіть базовий випадок або зменште регіон стека. Спіймати його має **ваше** повідомлення про помилку, а не падіння процесу.
 
-**M4 — Split the binary.**
-At least four translation units: `main`, `cpu`, `memory`, `stack` (plus `display` if you have it). No giant `main.cpp`. A `CMakeLists.txt` that lists them. The defense may ask "why is `push` not in `cpu.cpp`?"
+**M4 — розділіть бінарник.**
+Щонайменше чотири одиниці трансляції: `main`, `cpu`, `memory`, `stack` (плюс `display`, якщо він у вас є). Жодних гігантських `main.cpp`. `CMakeLists.txt`, у якому вони всі перелічені. На захисті можуть спитати: «а чому `push` не в `cpu.cpp`?»
 
-### Definition of done
+### Коли вважати готовим
 
-- `SP`, `PUSH`/`POP`, and a `Stack` ADT with overflow/underflow handled.
-- `CALL`/`RET` match [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly) byte for byte; a non-recursive call demo, traced.
-- `MUL` implemented; recursive `fact(5) = 120` running; calling convention written down; the listing modified once and explained; overflow demonstrated.
-- Multiple `.cpp`/`.hpp` files; CMake lists them.
-- Repo tagged `lab-07`.
-
----
-
-## Levels
-
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
-
-### Basic — "a call comes back" (~8–10 hours)
-- `SP` starts at `0xFFF`; `PUSH A` / `POP A` / `PUSH B` / `POP B` per [ISA.md](ISA.md), empty-descending.
-- Overflow below `0xF00` and underflow above `0xFFF` stop the machine with **your** message. No host crash, no silent wrap.
-- `CALL` / `RET` with the byte order from [ISA.md §6](ISA.md#6-how-call-and-ret-work-exactly), and a one-level call demo (`CALL printA` / `OUT` / `RET` / `HALT`) traced in the README.
-- `MUL` implemented; the given `fact` listing poked in and printing `120`.
-- Repo tagged `lab-07`.
-
-### Standard — target (~13–15 hours)
-- Everything in **Definition of done** above.
-- The `Stack` ADT: `stack.hpp` / `stack.cpp`, `push`/`pop` returning `bool`, and nothing outside `stack.cpp` touching the representation. The project split across at least four translation units, all listed in `CMakeLists.txt`.
-- `fact` traced by depth, modified once (M3 offers three options) and the result explained.
-- The calling convention from [ISA.md §6](ISA.md#calling-convention) restated in your own README.
-- One deliberate stack overflow caught by your own error.
-
-### Advanced — distinction (~18–19 hours)
-- Everything above, plus `MUL` written as a **subroutine** by repeated addition, and a step-count comparison against the opcode.
-- `PUSH H` / `POP H` and a function that needs them.
-- A linked-node `Stack` behind the same interface, swapped in without touching `cpu.cpp`.
+- `SP`, `PUSH`/`POP` і `Stack` як тип, у якого оброблені переповнення й спустошення.
+- `CALL`/`RET` збігаються з [ISA.uk.md §6](ISA.uk.md#6-як-саме-працюють-call-і-ret) побайтово; є простежена демонстрація виклику без рекурсії.
+- `MUL` реалізований; рекурсивний `fact(5) = 120` працює; конвенція виклику записана; лістинг один раз змінений і пояснений; переповнення показане.
+- Кілька файлів `.cpp` і `.hpp`; CMake їх перелічує.
+- Тег `lab-07`.
 
 ---
 
-## Deliverable checklist
+## Рівні
 
-- [ ] `SP` + `PUSH`/`POP`; `stack.hpp`/`cpp`; push/pop fail cleanly.
-- [ ] `CALL`/`RET`; trace of a one-level call showing `PC` and `SP`.
-- [ ] `MUL`; recursive `fact` running and traced; one modification explained; convention documented; overflow shown.
-- [ ] Project split across headers; CMake updated.
-- [ ] Git tag `lab-07`.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
 
----
+### Basic — «виклик повертається» (~8–10 годин)
+- `SP` стартує з `0xFFF`; `PUSH A` / `POP A` / `PUSH B` / `POP B` за [ISA.uk.md](ISA.uk.md), «порожній спадний».
+- Переповнення нижче за `0xF00` і спустошення вище за `0xFFF` зупиняють машину **вашим** повідомленням. Ніякого падіння процесу, ніякого тихого загортання.
+- `CALL` / `RET` із порядком байтів із [ISA.uk.md §6](ISA.uk.md#6-як-саме-працюють-call-і-ret) і простежена в README демонстрація виклику на один рівень (`CALL printA` / `OUT` / `RET` / `HALT`).
+- `MUL` реалізований; даний лістинг `fact` покладений у пам'ять і друкує `120`.
+- Тег `lab-07`.
 
-## Reflection — explain it at the whiteboard
+### Standard — цільовий (~13–15 годин)
+- Усе з розділу **Коли вважати готовим**.
+- `Stack` як абстрактний тип: `stack.hpp` / `stack.cpp`, `push`/`pop` повертають `bool`, і ніщо поза `stack.cpp` не чіпає представлення. Проєкт розділений щонайменше на чотири одиниці трансляції, усі перелічені в `CMakeLists.txt`.
+- `fact` простежений по глибині, один раз змінений (M3 пропонує три варіанти), результат пояснений.
+- Конвенція виклику з [ISA.uk.md §6](ISA.uk.md#конвенція-виклику), переказана своїми словами у власному README.
+- Одне навмисне переповнення стека, спіймане власною помилкою.
 
-1. Draw the stack as `fact(3)` calls `fact(2)` calls `fact(1)`. What is on each frame?
-2. When do you pass by value, by pointer, by reference? Give an `ember` example of each.
-3. Why is returning via a global a bad idea? What happens with recursion?
-4. What does `RET` pop, and why must `CALL` push `PC` *after* the instruction, not the opcode address?
-5. Array stack vs linked stack: one advantage each. Which did you pick and why?
-6. What is a header guard / `#pragma once` for? What does the linker error "multiple definition" mean?
-7. In guest `fact`, why must `n` be pushed *before* the recursive `CALL`? What does the program print if you forget?
-8. The stack grows down from `0xFFF`, the heap grows up from `0xC00`. On a machine with no fence between them, what does "stack overflow" actually corrupt?
-
----
-
-## Stretch
-
-Write `MUL` as a **subroutine** instead of an opcode — repeated addition in a loop, using the stack for its own saved registers. Then use it from `fact` and compare step counts. This is the honest way an 8-bit machine without a multiplier does it.
-
-`PUSH H` / `POP H` ([ISA.md](ISA.md) `0x56`/`0x57`) and a subroutine that needs them — one that walks memory and must restore the caller's pointer.
-
-A linked-node `Stack` behind the same `stack.hpp` interface; swap the implementation without touching `cpu.cpp` and write down one advantage of each. That swap *is* what an ADT buys you.
-
-Tail-recursive `fact` vs naive in [Godbolt](https://godbolt.org/) — did the compiler turn one into a loop? `inline` vs a normal function; and don't `#define` macros that evaluate `x++` twice. Templates: `template<typename T> void swap(T& a, T& b)` as a five-line extra, not a second project.
-
-If `fact` came out clean and you want more: look at the two `JZ base` operands in the given listing. They are the same two bytes. Now insert one instruction above `base` and work out how many bytes in the listing change. Then stop — you are meant to feel that, and [Lab 8](lab-08-give-it-a-language.md) is the answer.
+### Advanced — відмінно (~18–19 годин)
+- Усе вище плюс `MUL`, написаний **підпрограмою** через повторне додавання, і порівняння кількості кроків із опкодом.
+- `PUSH H` / `POP H` і функція, якій вони потрібні.
+- `Stack` на зв'язаних вузлах за тим самим інтерфейсом, підмінений без жодної правки в `cpu.cpp`.
 
 ---
 
-## Resources
+## Чекліст здачі
 
-**Watch**
+- [ ] `SP` + `PUSH`/`POP`; `stack.hpp`/`cpp`; `push`/`pop` відмовляють акуратно.
+- [ ] `CALL`/`RET`; трейс виклику на один рівень із `PC` і `SP`.
+- [ ] `MUL`; рекурсивний `fact` працює й простежений; одна зміна пояснена; конвенція записана; переповнення показане.
+- [ ] Проєкт розділений на файли із заголовками; CMake оновлений.
+- [ ] Тег `lab-07`.
 
-- [What is a stack (CS50 or equivalent, ~10 min)](https://www.youtube.com/watch?v=I47Y6VHcXMU) — plates, then frames.
-- Ben Eater — [Stack](https://www.youtube.com/watch?v=dveq3NL4jls) on the 8-bit computer, if you're still on that series.
+---
 
-**Read**
+## На захисті — поясніть біля дошки
 
-- learncpp.com — [functions](https://www.learncpp.com/cpp-tutorial/introduction-to-functions/), [pass by value](https://www.learncpp.com/cpp-tutorial/introduction-to-function-parameters-and-arguments/), [pass by ref](https://www.learncpp.com/cpp-tutorial/pass-by-lvalue-reference/), [recursion](https://www.learncpp.com/cpp-tutorial/recursion/), [header files](https://www.learncpp.com/cpp-tutorial/header-files/).
-- Wikipedia — [Call stack](https://en.wikipedia.org/wiki/Call_stack), [Calling convention](https://en.wikipedia.org/wiki/Calling_convention) (skim).
-- Nystrom, Crafting Interpreters — [Calls and Functions](https://craftinginterpreters.com/calls-and-functions.html) — the *idea*, even though it's a different language.
+1. Намалюйте стек у момент, коли `fact(3)` викликає `fact(2)`, а той `fact(1)`. Що лежить у кожному кадрі?
+2. Коли передають за значенням, коли вказівником, коли посиланням? Наведіть приклад кожного з `ember`.
+3. Чому повертати результат через глобальну змінну — погана ідея? Що станеться з рекурсією?
+4. Що знімає `RET` і чому `CALL` має класти `PC` **після** інструкції, а не адресу самого опкода?
+5. Стек на масиві проти стека на списку: по одній перевазі кожного. Що обрали ви і чому?
+6. Навіщо `#pragma once` чи захисник заголовка? Що означає помилка лінкера `multiple definition`?
+7. Чому в `fact` усередині гостя `n` треба покласти на стек **до** рекурсивного `CALL`? Що надрукує програма, якщо про це забути?
+8. Стек росте вниз від `0xFFF`, купа росте вгору від `0xC00`. На машині, де між ними немає перегородки, що саме псує «переповнення стека»?
+
+---
+
+## Якщо встигаєте
+
+Напишіть `MUL` **підпрограмою**, а не опкодом: повторне додавання в циклі, зі стеком для власних збережених регістрів. Потім викличте його з `fact` і порівняйте кількість кроків. Саме так це чесно робить восьмибітна машина без множника.
+
+`PUSH H` / `POP H` ([ISA.uk.md](ISA.uk.md), `0x56`/`0x57`) і підпрограма, якій вони потрібні: така, що ходить пам'яттю й мусить повернути вказівник у стані, у якому його лишив той, хто викликав.
+
+`Stack` на зв'язаних вузлах за тим самим інтерфейсом `stack.hpp`: підміняєте реалізацію, не чіпаючи `cpu.cpp`, і записуєте по одній перевазі кожного варіанта. Оця підміна **і є** те, заради чого існують абстрактні типи даних.
+
+Хвостово-рекурсивний `fact` проти наївного в [Godbolt](https://godbolt.org/) — чи перетворив компілятор один із них на цикл? `inline` проти звичайної функції; і не пишіть `#define`-макросів, які обчислюють `x++` двічі. Шаблони: `template<typename T> void swap(T& a, T& b)` як п'ятирядкове доповнення, а не як другий проєкт.
+
+Якщо `fact` вийшов чисто й хочеться ще: подивіться на два операнди `JZ base` у даному лістингу. Це ті самі два байти. А тепер вставте одну інструкцію вище за `base` і порахуйте, скільки байтів у лістингу зміняться. І на цьому зупиніться — ви маєте це відчути, а відповідь дає [Лаба 8](lab-08-give-it-a-language.md).
+
+---
+
+## Що почитати й подивитись
+
+**Подивитись**
+
+- [What is a stack (CS50 або схоже, ~10 хв)](https://www.youtube.com/watch?v=I47Y6VHcXMU) — спершу тарілки, потім кадри.
+- Ben Eater — [Stack](https://www.youtube.com/watch?v=dveq3NL4jls) на восьмибітному комп'ютері, якщо ви ще на тій серії.
+
+**Почитати**
+
+- learncpp.com — [функції](https://www.learncpp.com/cpp-tutorial/introduction-to-functions/), [передача за значенням](https://www.learncpp.com/cpp-tutorial/introduction-to-function-parameters-and-arguments/), [передача за посиланням](https://www.learncpp.com/cpp-tutorial/pass-by-lvalue-reference/), [рекурсія](https://www.learncpp.com/cpp-tutorial/recursion/), [заголовки](https://www.learncpp.com/cpp-tutorial/header-files/).
+- Вікіпедія — [стек викликів](https://uk.wikipedia.org/wiki/%D0%A1%D1%82%D0%B5%D0%BA_%D0%B2%D0%B8%D0%BA%D0%BB%D0%B8%D0%BA%D1%96%D0%B2), [конвенція виклику](https://en.wikipedia.org/wiki/Calling_convention) (побіжно).
+- Nystrom, Crafting Interpreters — [Calls and Functions](https://craftinginterpreters.com/calls-and-functions.html): важлива сама **ідея**, хоч мова там і інша.

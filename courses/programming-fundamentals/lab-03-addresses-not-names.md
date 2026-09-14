@@ -1,95 +1,93 @@
-# Lab 03 — Addresses, Not Names: Pointers and Memory
+# Лаба 03 — Адреси, а не імена: вказівники й пам'ять
 
-> "A pointer is a variable whose value is an address. Everything else is consequences."
+> «Вказівник — це змінна, значення якої є адресою. Усе інше — наслідки.»
 
-**Weeks:** 5–6 · **Language focus:** addresses, `&` and `*`, typed vs `void*`, `sizeof`, pointer arithmetic, null, the difference between a name and a location · **Project step:** `LOAD`/`STORE`, immediates, the address register `H`, a PC that *walks* memory · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 02](lab-02-bits-dont-lie.md) · **Notes:** [theory + experiments](lab-03-addresses-not-names.notes.md)
-
----
-
-## This lab's feature
-
-Last week the CPU added registers. Registers are names. Memory is a street of numbered houses. A **pointer** is a slip of paper with a house number on it.
-
-In C++, `&x` is "the address of `x`." `*p` is "the thing at address `p`." `p + 1` is not "one more byte" — it is "one more *element of the type `p` points at*." That last sentence is the entire subject of pointer arithmetic, and it is why `ember`'s program counter is a `uint16_t` index into `Byte data[4096]`, not a host `int*` you increment casually.
-
-This lab makes the VM a von Neumann machine: **instructions and data live in the same box.** `PC` is an address. `LOAD A, [addr]` copies a byte from memory into a register. `STORE [addr], A` copies the other way. `LOADI A, imm` reads the *next* byte after the opcode — which means `step` must increment `PC` by more than one. You will also meet `void*` and `sizeof`, and you will let AddressSanitizer yell when you walk off the array on purpose.
-
-And `ember` grows a register that is **not** a value: **`H`**, sixteen bits wide, whose whole job is to hold an address. `LOAD A, [H]` follows it; `INCH` walks it to the next cell. `A` and `B` hold numbers; `H` holds *where*. That is a pointer, built into the hardware — and it is the reason a program can loop over memory at all, instead of only touching addresses it knew when it was assembled.
-
-This is also the lab where the [memory map](ISA.md#2-memory-map) starts to matter: code lives at `0x000`, your data at `0x800`. Two regions, one box.
-
-What this lab is not: "bypass strict typing" by casting a `float*` to `int*` and pretending you decoded the bits. That is undefined behaviour. The honest way to see a float's bytes is `std::memcpy` into a `uint32_t` (or a dump of `ember` memory you stored them in). Sanitizers stay on.
+**Тижні:** 5–6 · **Про мову:** адреси, `&` і `*`, типізований вказівник проти `void*`, `sizeof`, арифметика вказівників, `nullptr`, різниця між іменем і місцем · **Крок проєкту:** `LOAD`/`STORE`, безпосередні операнди, адресний регістр `H`, лічильник команд, який *ходить* пам'яттю · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Попередня:** [Лаба 02](lab-02-bits-dont-lie.md) · **Notes:** [теорія і досліди](lab-03-addresses-not-names.notes.md)
 
 ---
 
-## Theory
+## Про що ця лаба
 
-### 1. Names live in the compiler; addresses live in the machine
+Минулого тижня процесор обзавівся регістрами. Регістр — це ім'я. Пам'ять — це вулиця з пронумерованими будинками. **Вказівник** — папірець, на якому записано номер будинку.
+
+У C++ `&x` — це «адреса `x`». `*p` — «те, що лежить за адресою `p`». А `p + 1` — це не «на байт далі», це «на один *елемент того типу, на який дивиться `p`*, далі». Оце останнє речення і є вся арифметика вказівників, і саме через нього лічильник команд `ember` — це `uint16_t`, індекс у `Byte data[4096]`, а не `int*` вашого процесу, який можна безтурботно збільшувати.
+
+Ця лаба робить із віртуальної машини машину фон Неймана: **інструкції й дані лежать в одній коробці**. `PC` — це адреса. `LOAD A, [addr]` копіює байт із пам'яті в регістр. `STORE [addr], A` — навпаки. `LOADI A, imm` читає **наступний** байт після опкода, а отже `step` має рухати `PC` більше ніж на одиницю. Заразом ви познайомитесь із `void*` і `sizeof` і дасте AddressSanitizer накричати на вас, коли навмисно вилізете за масив.
+
+І в `ember` з'являється регістр, який тримає **не значення**: **`H`**, шістнадцять бітів, і вся його робота — тримати адресу. `LOAD A, [H]` іде за нею, `INCH` пересуває її на наступну клітинку. `A` і `B` тримають числа, `H` тримає **де**. Це вказівник, убудований у залізо, — і саме завдяки йому програма взагалі може ходити пам'яттю по колу, а не лише чіпати ті адреси, які знала на момент складання.
+
+Ще з цієї лаби починає працювати [карта пам'яті](ISA.uk.md#2-карта-памяті): код живе з `0x000`, ваші дані — з `0x800`. Два регіони, одна коробка.
+
+Чого ця лаба **не** про: не про те, щоб «обійти сувору типізацію», привівши `float*` до `int*` і вдавши, що ви розібрали біти. Це невизначена поведінка. Чесний спосіб подивитись на байти `float` — `std::memcpy` у `uint32_t` (або покласти їх у пам'ять `ember` і зробити дамп). Санітайзери лишаються ввімкненими.
+
+---
+
+## Теорія
+
+### 1. Імена живуть у компіляторі, адреси — у машині
 
 ```cpp
 int x = 65;
-int* p = &x;     // p holds the address of x
-*p = 66;         // the memory that x names now holds 66
+int* p = &x;     // p тримає адресу x
+*p = 66;         // у пам'яті, яку називає x, тепер 66
 ```
 
-`x` is a name the compiler uses. After compilation there is a location. `&` takes that location. `*` follows a location to a value. Drawing this once — box `x` with `65` in it, arrow from `p` — is worth more than a page of syntax.
+`x` — це ім'я, яким користується компілятор. Після компіляції лишається **місце**. `&` бере це місце. `*` іде за місцем до значення. Намалювати це один раз — коробка `x` із `65` всередині й стрілка від `p` — корисніше за сторінку синтаксису.
 
-**Null:** `nullptr` (or `0` in old code) means "this pointer does not point." Dereferencing it is UB; ASan will usually catch it. In `ember`, an address `>= MEM_SIZE` is the analogue: reject it, do not wrap unless you *mean* wrap and document it.
+**Нікуди:** `nullptr` (або `0` у старому коді) означає «цей вказівник нікуди не вказує». Розіменувати його — UB; ASan це зазвичай ловить. У `ember` аналог — адреса `>= MEM_SIZE`: відхиляйте її й не загортайте, якщо тільки не задумали загортання свідомо й не записали це.
 
-### 2. A pointer has a type so `*` and `+` know the size
+### 2. У вказівника є тип, щоб `*` і `+` знали розмір
 
-`int*`, `char*`, `Byte*` are different. `sizeof(*p)` is the size of the **pointee**. `p + 1` adds `sizeof(*p)` bytes to the address. That is why you iterate a `Byte*` over `ember` memory one cell at a time, and why `int* q = ...; q + 1` skips four bytes on a typical machine.
+`int*`, `char*`, `Byte*` — різні типи. `sizeof(*p)` — це розмір того, **на що** вказує `p`. `p + 1` додає до адреси `sizeof(*p)` байтів. Саме тому пам'ять `ember` обходять через `Byte*` по одній клітинці, і саме тому `int* q = ...; q + 1` перестрибує чотири байти на типовій машині.
 
 ```cpp
-Byte* base = mem.data;          // address of cell 0
-Byte* cell = base + 10;         // cell 10, because sizeof(Byte)==1
+Byte* base = mem.data;          // адреса клітинки 0
+Byte* cell = base + 10;         // клітинка 10, бо sizeof(Byte) == 1
 *cell = 0x41;
 ```
 
-Inside the VM, prefer **indices** (`uint16_t addr`) over host pointers for guest addresses. Host pointers are how *your C++* talks to the `data` array. Guest addresses are numbers the ember-program sees. Mixing them is the classic bug: storing a host pointer into ember memory and expecting it to mean something on another machine (or after realloc). Don't.
+Усередині віртуальної машини для адрес гостя беріть **індекси** (`uint16_t addr`), а не вказівники хоста. Вказівники хоста — це те, чим *ваш C++* розмовляє з масивом `data`. Адреси гостя — числа, які бачить програма всередині `ember`. Змішати їх — класичний баг: покласти вказівник хоста в пам'ять гостя й чекати, що він щось означатиме на іншій машині (чи після перевиділення пам'яті). Не робіть так.
 
-### 3. `void*` is "an address of unknown type"
+### 3. `void*` — це «адреса без типу»
 
-You can assign any object pointer to `void*` and back with a cast. You **cannot** dereference or increment a `void*` — the compiler does not know the size. That is the whole feature. Use it when you must pass "some buffer" (later: a dump function). Do not use it to launder types and read a `float` as `int`. **Type punning through the wrong pointer is UB.** To inspect bytes of a `float`:
+Будь-який вказівник на об'єкт можна присвоїти у `void*` і повернути назад кастом. А от розіменувати чи збільшити `void*` **не можна** — компілятор не знає розміру. У цьому вся суть. Беріть його, коли треба передати «якийсь буфер» (згодом — у функцію дампу). Не беріть його, щоб протягнути тип і прочитати `float` як `int`. **Перетлумачення через вказівник не того типу — це UB.** Щоб подивитись на байти `float`:
 
 ```cpp
 float f = 1.0f;
 std::uint32_t bits;
-std::memcpy(&bits, &f, sizeof(bits));   // the defined way
+std::memcpy(&bits, &f, sizeof(bits));   // визначений спосіб
 ```
 
-Or `set` the four bytes into `ember` and dump them. Same insight, no UB.
+Або покладіть ці чотири байти в `ember` через `set` і зробіть дамп. Розуміння те саме, UB немає.
 
-### 4. `sizeof`, alignment, and why the dump is the truth
+### 4. `sizeof`, вирівнювання, і чому правду каже дамп
 
-`sizeof(T)` is how many bytes a `T` occupies, including padding inside structs (Lab 6). `sizeof(p)` where `p` is a pointer is the size of the *address* (8 on a 64-bit host), not the pointee. `sizeof(*p)` is the pointee. Print both this week; they confuse everyone once.
+`sizeof(T)` — скільки байтів займає `T`, разом із заповнювачами всередині структур (Lab 6). `sizeof(p)`, де `p` — вказівник, це розмір **адреси** (8 на 64-бітному хості), а не того, на що вона вказує. `sizeof(*p)` — це вже те, на що вказує. Цього тижня надрукуйте обидва: на цьому кожен спотикається рівно один раз.
 
-### 5. The program counter is a pointer by another name
+### 5. Лічильник команд — це вказівник під іншим іменем
 
-`PC` holds a guest address. `step`:
+`PC` тримає адресу гостя. `step`:
 
 1. `Byte op = mem.get(cpu.pc);`
-2. decode;
-3. if the instruction has an immediate, `Byte imm = mem.get(cpu.pc + 1);`
-4. execute;
-5. `cpu.pc += size_of_this_instruction` — the size from [ISA.md](ISA.md), not a guess.
+2. розібрати опкод;
+3. якщо в інструкції є безпосередній операнд — `Byte imm = mem.get(cpu.pc + 1);`
+4. виконати;
+5. `cpu.pc += розмір_цієї_інструкції` — розмір із [ISA.uk.md](ISA.uk.md), а не на око.
 
-`LOAD A, [addr]` needs a 16-bit address: two bytes, little-endian (you discovered endianness in Lab 1 Stretch; do it for real now). `STORE` is the inverse. After this, a program can put data at `0x800` and code at `0x000` and *find* the data by address.
+`LOAD A, [addr]` потребує 16-бітної адреси: два байти, молодший перший (порядок байтів ви відкрили в Stretch першої лаби — тепер він знадобився по-справжньому). `STORE` — навпаки. Після цього програма може покласти дані на `0x800`, код на `0x000` і **знайти** дані за адресою.
 
-### 6. `H` — a pointer the CPU can hold
+### 6. `H` — вказівник, який тримає сам процесор
 
-`LOAD A, [0x0800]` has the address baked into the instruction. To walk an array
-you need an address the program can **change**, and eight bits are not enough to
-reach 4096 cells. So the CPU gets a 16-bit register whose value is an address:
+У `LOAD A, [0x0800]` адреса вшита в інструкцію. Щоб пройтись масивом, потрібна адреса, яку програма може **змінювати**, а восьми бітів не вистачить, щоб дістати 4096 клітинок. Тому процесор отримує 16-бітний регістр, значення якого — адреса:
 
 ```txt
-LOADH H, 0x0800     ; H now points at the first byte of the data region
+LOADH H, 0x0800     ; H тепер вказує на перший байт регіону даних
 LOAD  A, [H]        ; A = mem[H]        -- *p
 INCH                ; H = H + 1         -- ++p
-LOAD  A, [H]        ; the next cell
+LOAD  A, [H]        ; наступна клітинка
 ```
 
-Compare with the C++ on the left of your screen:
+Порівняйте з C++ на лівій половині екрана:
 
 ```cpp
 Byte* p = &mem.data[0x800];
@@ -98,139 +96,131 @@ Byte a = *p;
 a = *p;
 ```
 
-Same three ideas, two notations: a register that holds a location, an operation
-that follows it, an operation that moves it. `INCH` moves `H` by **one byte**
-because an `ember` cell is one byte — which is exactly why `p + 1` on an `int*`
-moves four. Pointer arithmetic counts *elements*, and here the element is a byte.
+Ті самі три ідеї, два записи: регістр, що тримає місце; операція, що йде за ним; операція, що його рухає. `INCH` рухає `H` на **один байт**, бо клітинка `ember` — один байт. Рівно тому `p + 1` на `int*` рухає на чотири: арифметика вказівників рахує **елементи**, а тут елемент — байт.
 
-You will not write a loop yet — jumps arrive in [Lab 4](lab-04-the-shape-of-control.md).
-This week `H` is stepped by hand, and that is enough to see it.
+Циклу ви поки не напишете — стрибки будуть у [Лабі 4](lab-04-the-shape-of-control.md). Цього тижня `H` рухається руками, і цього досить, щоб його побачити.
 
-### Prove it to yourself (notes §§1–4)
+### Перевірте самі (notes §§1–4)
 
 1. `int x = 65; int* p = &x; std::cout << x << ' ' << *p << ' ' << p << '\n'; *p = 1; std::cout << x;`
-2. `int a[3] = {10,20,30}; int* p = a; std::cout << *p << ' ' << *(p+1) << ' ' << *(p+2);` — then print `(p+1) - p` and the *byte* distance if you cast to `char*`.
-3. `sizeof(int*)` vs `sizeof(int)` vs `sizeof(void*)`.
-4. Write a function `void inc(int* p) { *p = *p + 1; }` and call `inc(&x)`. Then try `void inc(int p) { p = p + 1; }` — why doesn't `x` change?
-5. Walk one past the end of a 4-element array with ASan on. Read the report. That is M4.
+2. `int a[3] = {10,20,30}; int* p = a; std::cout << *p << ' ' << *(p+1) << ' ' << *(p+2);` — потім надрукуйте `(p+1) - p` і відстань **у байтах**, привівши до `char*`.
+3. `sizeof(int*)` проти `sizeof(int)` проти `sizeof(void*)`.
+4. Напишіть `void inc(int* p) { *p = *p + 1; }` і викличте `inc(&x)`. Потім спробуйте `void inc(int p) { p = p + 1; }` — чому `x` не змінюється?
+5. Вилізьте на одну клітинку за кінець масиву на 4 елементи з увімкненим ASan. Прочитайте звіт. Це і є M4.
 
 ---
 
-## Project step: load, store, and an immediate
+## Крок проєкту: завантажити, записати й безпосередній операнд
 
-### Milestones
+### Етапи
 
-**M1 — Guest addresses are numbers.**
-`get`/`set` already take an address. Now a 16-bit pair, little-endian. **`get16` is given** — read it, then write `set16` as its mirror image:
+**M1 — адреси гостя це числа.**
+`get`/`set` уже приймають адресу. Тепер 16-бітна пара, молодший байт перший. **`get16` дано** — прочитайте його й напишіть `set16` як дзеркальне відображення:
 
 ```cpp
-// GIVEN. Read two bytes as one 16-bit value, low byte first.
+// ДАНО. Прочитати два байти як одне 16-бітне значення, молодший перший.
 std::uint16_t get16(const Memory& mem, std::size_t addr) {
     Byte lo = mem_get(mem, addr);
     Byte hi = mem_get(mem, addr + 1);
     return static_cast<std::uint16_t>(lo | (hi << 8));
 }
 
-// YOURS. Write `value` as two bytes, low byte first. Reject addr + 1 >= MEM_SIZE.
+// ВАШЕ. Записати `value` двома байтами, молодший перший. Відхилити addr + 1 >= MEM_SIZE.
 bool set16(Memory& mem, std::size_t addr, std::uint16_t value);
 ```
 
-`hi << 8` is Lab 2 doing a job. `lo |` is the other half of it. `regs` also prints `PC` and `H`. Document endianness with a dump: `set16 0 0x1234` → bytes `34 12`. Little-endian is not a style choice here: [ISA.md §4](ISA.md#4-encoding) says every 16-bit operand in the instruction stream is stored low byte first, so `LOADH H, 0x0A00` assembles to `28 00 0A`.
+`hi << 8` — це Lab 2 при роботі. `lo |` — друга половина тієї ж роботи. `regs` тепер друкує ще й `PC` та `H`. Порядок байтів задокументуйте дампом: `set16 0 0x1234` дає байти `34 12`. Тут це не питання смаку: [ISA.uk.md §4](ISA.uk.md#4-кодування) каже, що кожен 16-бітний операнд у потоці інструкцій лежить молодшим байтом уперед, тому `LOADH H, 0x0A00` збирається в `28 00 0A`.
 
-**M2 — The `0x2_` group.**
-Implement [ISA.md](ISA.md) rows `0x20`–`0x2C`: `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `MOV`, and the address register — `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. Plus `OUT` (`0x02`) and `OUTN` (`0x03`) from the control group, so a program can say something.
+**M2 — група `0x2_`.**
+Реалізуйте рядки `0x20`–`0x2C` з [ISA.uk.md](ISA.uk.md): `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `MOV` і адресний регістр — `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. Плюс `OUT` (`0x02`) і `OUTN` (`0x03`) з групи керування, щоб програма могла хоч щось сказати.
 
-Sizes come from the table. `step` must not run off the end of memory: if `PC` would fetch past `MEM_SIZE`, halt with an error (this is a bounds-checked pointer).
+Розміри беруться з таблиці. `step` не має вибігати за кінець пам'яті: якщо `PC` збирається читати за `MEM_SIZE` — зупиніться з помилкою (це і є вказівник із перевіркою меж).
 
-**M3 — A program that uses data.**
-Poke at `0x800` the bytes of a message (`65 66 67 0` — `ABC`). At `0x000`, a program that loads from `0x800` into `A`, `OUT`s it, and halts. Run with `run` (step until `HALT`). Paste the terminal line that prints `A` and the `dump` of both regions.
+**M3 — програма, яка користується даними.**
+Покладіть на `0x800` байти повідомлення (`65 66 67 0` — `ABC`). На `0x000` — програму, яка завантажує з `0x800` у `A`, робить `OUT` і зупиняється. Запустіть через `run` (крокувати до `HALT`). Вставте рядок термінала, де надрукувалась літера, і `dump` обох регіонів.
 
-Then do it a second time **through `H`**: `LOADH H, 0x0800`, `LOAD A, [H]`, `OUT`, `INCH`, `LOAD A, [H]`, `OUT`, `HALT` — and watch `regs` show `H` moving. The output is `AB`. Those seven instructions are the loop you will write for real in Lab 4.
+Потім зробіть те саме вдруге, але **через `H`**: `LOADH H, 0x0800`, `LOAD A, [H]`, `OUT`, `INCH`, `LOAD A, [H]`, `OUT`, `HALT` — і подивіться в `regs`, як рухається `H`. Вивід буде `AB`. Оці сім інструкцій — той самий цикл, який ви по-справжньому напишете в Lab 4.
 
-**M4 — The host pointer vs the guest address.**
-In the README: one paragraph on why `CPU` holds `Memory*` (host pointer to the whole box) plus `uint16_t pc` and `uint16_t h` (guest addresses), not `Byte*` pointers into `data`. Note that `H` is a pointer you can dump: it is a number inside the machine, so a guest program can compute with it. A host `Byte*` is meaningless to the guest and different on every run.
+**M4 — вказівник хоста проти адреси гостя.**
+У README: абзац про те, чому `CPU` тримає `Memory*` (вказівник хоста на всю коробку) плюс `uint16_t pc` і `uint16_t h` (адреси гостя), а не `Byte*` усередину `data`. Зверніть увагу: `H` — це вказівник, який можна побачити в дампі, бо це число всередині машини, і програма-гість може з ним рахувати. А `Byte*` хоста для гостя не означає нічого й щоразу інший.
 
-Then: temporarily write a 3-line program that does `data[MEM_SIZE] = 1` (off-by-one). Paste the ASan report — [errors.notes.md §3](errors.notes.md) explains which three lines of it matter. Restore the bounds check. That report is the deliverable.
+Потім тимчасово напишіть трирядкову програму, яка робить `data[MEM_SIZE] = 1` (вихід на одиницю за межу). Вставте звіт ASan — у [errors.notes.md §3](errors.notes.md) пояснено, які три рядки в ньому мають значення. Поверніть перевірку меж на місце. Здається саме цей звіт.
 
-### Definition of done
+### Коли вважати готовим
 
-- `get16`/`set16` little-endian; documented.
-- The `0x2_` group from [ISA.md](ISA.md), plus `OUT` and `OUTN`; `run` until HALT.
-- A program that loads data from a different region than code, once with an absolute address and once through `H`.
-- ASan off-by-one captured and fixed; host vs guest explained.
-- Repo tagged `lab-03`.
-
----
-
-## Levels
-
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
-
-### Basic — "the CPU can reach memory" (~8–10 hours)
-- `set16` written as the mirror of the given `get16`, little-endian, documented with a dump.
-- `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `OUT`, `OUTN` — sizes from [ISA.md](ISA.md).
-- `run` executes until `HALT` or an error.
-- A program with code at `0x000` and data at `0x800` that prints a character.
-- Repo tagged `lab-03`.
-
-### Standard — target (~13–15 hours)
-- Everything in **Definition of done** above.
-- The address register `H`: `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. This is the lab's whole idea in hardware — a register that holds an address instead of a value.
-- The seven-instruction `H` walk in M3, traced with `regs` showing `H` move.
-- An ASan report for a deliberate off-by-one, pasted, then fixed.
-- One paragraph: host pointer vs guest address, and a bug that mixing them would cause.
-
-### Advanced — distinction (~18 hours)
-- Everything above, plus a `void dump(const void* ptr, std::size_t n)` that hexdumps any host object — `dump(&cpu, sizeof(cpu))`.
-- A four-byte copy driven by `H` and `MOV`, stepped by hand and traced.
+- `get16`/`set16` з молодшим байтом уперед; це задокументовано.
+- Група `0x2_` з [ISA.uk.md](ISA.uk.md) плюс `OUT` і `OUTN`; `run` до `HALT`.
+- Програма, яка бере дані з іншого регіону, ніж код: один раз за абсолютною адресою, другий — через `H`.
+- Звіт ASan про вихід за межу спійманий і виправлений; різницю хост/гість пояснено.
+- Тег `lab-03`.
 
 ---
 
-## Deliverable checklist
+## Рівні
 
-- [ ] 16-bit little-endian memory accessors.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
+
+### Basic — «процесор дістає до пам'яті» (~8–10 годин)
+- `set16`, написаний як дзеркало даного `get16`, молодший байт уперед, задокументований дампом.
+- `LOADI A/B`, `LOAD A/B, [addr16]`, `STORE [addr16], A/B`, `OUT`, `OUTN` — розміри з [ISA.uk.md](ISA.uk.md).
+- `run` виконує до `HALT` або до помилки.
+- Програма з кодом на `0x000` і даними на `0x800`, яка друкує символ.
+- Тег `lab-03`.
+
+### Standard — цільовий (~13–15 годин)
+- Усе з розділу **Коли вважати готовим**.
+- Адресний регістр `H`: `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`, `DECH`. Це вся ідея лаби, втілена в залізі: регістр, який тримає адресу, а не значення.
+- Прохід із семи інструкцій з M3, простежений із `regs`, де видно рух `H`.
+- Звіт ASan про навмисний вихід за межу, вставлений, потім виправлений.
+- Абзац: вказівник хоста проти адреси гостя і баг, до якого призводить їх змішування.
+
+### Advanced — відмінно (~18 годин)
+- Усе вище плюс `void dump(const void* ptr, std::size_t n)`, який робить hex-дамп будь-якого об'єкта хоста: `dump(&cpu, sizeof(cpu))`.
+- Копіювання чотирьох байтів, кероване `H` і `MOV`, покроково й із трейсом.
+
+---
+
+## Чекліст здачі
+
+- [ ] 16-бітний доступ до пам'яті, молодший байт уперед.
 - [ ] `LOADI` / `LOAD` / `STORE` / `MOV` / `OUT` / `OUTN`; `run`.
-- [ ] `H`, `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`; `regs` shows `H`.
-- [ ] Code at `0x000`, data at `0x800`, a trace in the README.
-- [ ] ASan report for an off-by-one, then the fix.
-- [ ] Git tag `lab-03`.
+- [ ] `H`, `LOADH`, `LOAD A, [H]`, `STORE [H], A`, `INCH`; `regs` показує `H`.
+- [ ] Код на `0x000`, дані на `0x800`, трейс у README.
+- [ ] Звіт ASan про вихід за межу і виправлення після нього.
+- [ ] Тег `lab-03`.
 
 ---
 
-## Reflection — explain it at the whiteboard
+## На захисті — поясніть біля дошки
 
-1. Draw `int x = 65; int* p = &x;` as boxes and an arrow. What is `p`, what is `*p`, what is `&p`?
-2. Why does `p + 1` depend on the type of `p`?
-3. Why can't you dereference `void*`?
-4. Why is reading a `float` through an `int*` undefined, and what do you do instead?
-5. What is the difference between a host pointer and a guest address in `ember`? Give a bug that mixing them would cause.
-6. `inc(int x)` vs `inc(int* p)` — which one can the callee use to change the caller's `x`, and why?
-7. `A` is 8 bits, `H` is 16. Why can `H` not be 8 bits? What is the largest address a byte can name?
-8. Write `LOAD A, [H]` / `INCH` as two lines of C++ with a `Byte*`. Which one is `*p` and which is `++p`?
-
----
-
-## Stretch
-
-A `void dump(const void* ptr, std::size_t n)` that hexdumps any host object — `dump(&cpu, sizeof(cpu))` shows you your own CPU as bytes. That's `void*` earning its keep, and it previews Lab 6's question about struct layout.
-
-Then: a four-byte copy driven entirely by `H` and `MOV`, stepped by hand, traced in the README. Or add `HLOW` ([ISA.md](ISA.md) `0x2D`) so a program can print how far `H` has walked.
+1. Намалюйте `int x = 65; int* p = &x;` коробками й стрілкою. Що таке `p`, що таке `*p`, що таке `&p`?
+2. Чому `p + 1` залежить від типу `p`?
+3. Чому не можна розіменувати `void*`?
+4. Чому читати `float` через `int*` невизначено і що роблять натомість?
+5. Чим вказівник хоста відрізняється від адреси гостя в `ember`? Назвіть баг, до якого призведе їх змішування.
+6. `inc(int x)` проти `inc(int* p)` — котра з них може змінити `x` у того, хто викликав, і чому?
+7. `A` має 8 бітів, `H` — 16. Чому `H` не може бути восьмибітним? Яку найбільшу адресу назве один байт?
+8. Запишіть `LOAD A, [H]` і `INCH` двома рядками C++ через `Byte*`. Котрий із них `*p`, а котрий `++p`?
 
 ---
 
-## Resources
+## Якщо встигаєте
 
-**Watch**
+`void dump(const void* ptr, std::size_t n)`, який робить hex-дамп будь-якого об'єкта хоста: `dump(&cpu, sizeof(cpu))` показує вам ваш власний процесор у байтах. Ось тут `void*` і відпрацьовує своє існування, а заразом це передчуття питання Lab 6 про розкладку структур.
 
-- [Pointers in C/C++ (mycodeschool, 17 min)](https://www.youtube.com/watch?v=zuegQmMdy8M) — boxes and arrows, slowly.
-- Ben Eater — [RAM](https://www.youtube.com/watch?v=ui20Nla5JXw) if "address line" is still abstract.
+Далі: копіювання чотирьох байтів, кероване тільки `H` і `MOV`, покроково, з трейсом у README. Або додайте `HLOW` ([ISA.uk.md](ISA.uk.md), `0x2D`), щоб програма могла надрукувати, наскільки далеко зайшов `H`.
 
-**Read**
+---
 
-- learncpp.com — [Introduction to pointers](https://www.learncpp.com/cpp-tutorial/introduction-to-pointers/), [null](https://www.learncpp.com/cpp-tutorial/null-pointers/), [pointer arithmetic](https://www.learncpp.com/cpp-tutorial/pointer-arithmetic-and-subscripting/).
-- cppreference — [`reinterpret_cast` / type aliasing](https://en.cppreference.com/w/cpp/language/reinterpret_cast) (the rule you're *not* breaking) and [`memcpy`](https://en.cppreference.com/w/cpp/string/byte/memcpy).
-- CS:APP §3.4 (machine-level addressing) if you want the assembly view of `&` and `*`.
+## Що почитати й подивитись
+
+**Подивитись**
+
+- [Pointers in C/C++ (mycodeschool, 17 хв)](https://www.youtube.com/watch?v=zuegQmMdy8M) — коробки й стрілки, повільно.
+- Ben Eater — [RAM](https://www.youtube.com/watch?v=ui20Nla5JXw), якщо «адресна шина» досі звучить абстрактно.
+
+**Почитати**
+
+- learncpp.com — [вступ до вказівників](https://www.learncpp.com/cpp-tutorial/introduction-to-pointers/), [нульові вказівники](https://www.learncpp.com/cpp-tutorial/null-pointers/), [арифметика вказівників](https://www.learncpp.com/cpp-tutorial/pointer-arithmetic-and-subscripting/).
+- cppreference — [`reinterpret_cast` і правила аліасингу](https://en.cppreference.com/w/cpp/language/reinterpret_cast) (правило, яке ви **не** порушуєте) та [`memcpy`](https://en.cppreference.com/w/cpp/string/byte/memcpy).
+- CS:APP §3.4 (адресація на рівні машини), якщо хочеться побачити `&` і `*` очима асемблера.

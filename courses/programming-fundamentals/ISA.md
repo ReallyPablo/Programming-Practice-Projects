@@ -1,6 +1,6 @@
 # The `ember` machine — memory map and instruction set
 
-Course: [EN](README.md) · [Українською](README.uk.md)
+[English](ISA.md) · [Українською](ISA.uk.md) · Course: [EN](README.md) · [UK](README.uk.md)
 
 > Це довідник, а не текст для читання підряд. Тримайте його відкритим у сусідній
 > вкладці весь семестр. Кожна лаба додає сюди кілька рядків — і жодна не змінює

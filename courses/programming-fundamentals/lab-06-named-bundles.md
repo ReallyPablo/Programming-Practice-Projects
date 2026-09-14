@@ -1,24 +1,24 @@
-# Lab 06 — Named Bundles: Structs, Enums, and the Heap
+# Лаба 06 — Іменовані набори: структури, переліки й купа
 
-> "A struct is a layout. An enum is a list of meanings. The heap is memory whose lifetime you chose — and must un-choose."
+> «Структура — це розкладка. Перелік — це список значень. Купа — це пам'ять, час життя якої ви обрали самі й самі ж маєте скасувати.»
 
-**Weeks:** 11–12 · **Language focus:** `struct`, `enum class`, layout and `sizeof`, stack vs heap, `new`/`delete`, leaks and double-free · **Project step:** `CPU`/`Instruction` as structs, a heap region, sprites as records · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 05](lab-05-many-of-one-thing.md) · **Notes:** [theory + experiments](lab-06-named-bundles.notes.md)
-
----
-
-## This lab's feature
-
-Registers, flags, `PC`, a pointer to memory — you have been carrying those as loose variables or as a struct already. This week you treat **the record** as the design: a `struct` is a name for a layout in memory, field by field. An `enum` is a name for a small set of integers (opcodes, sprite kinds). Together they are how you stop writing `data[i+3]` and start writing `sprite.x`.
-
-The other half is **lifetime**. Everything so far was automatic: `CPU cpu{}` dies at the end of `main`. The **heap** (`new` / `delete`, or a bump pointer *inside* ember's 4 KB) is memory that lives until you say so. Forget `delete` and LeakSanitizer nags. `delete` twice and ASan nags. A dangling pointer is a pointer whose heap object is gone.
-
-Records this week are **sprites**: `x, y, vx, vy, alive`. You `PLOT` them each step. A sequence of records doing a job on the screen, not a table of fields to fill in.
+**Тижні:** 11–12 · **Про мову:** `struct`, `enum class`, розкладка й `sizeof`, стек проти купи, `new`/`delete`, витоки й подвійне звільнення · **Крок проєкту:** `CPU` і `Instruction` як структури, регіон купи, спрайти як записи · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Попередня:** [Лаба 05](lab-05-many-of-one-thing.md) · **Notes:** [теорія і досліди](lab-06-named-bundles.notes.md)
 
 ---
 
-## Theory
+## Про що ця лаба
 
-### 1. `struct` is adjacent fields with names
+Регістри, прапорці, `PC`, вказівник на пам'ять — досі ви носили це або окремими змінними, або вже структурою. Цього тижня **запис** стає способом проєктування: `struct` — це ім'я для розкладки в пам'яті, поле за полем. `enum` — ім'я для невеликого набору цілих (опкоди, види спрайтів). Разом вони роблять так, що замість `data[i+3]` ви пишете `sprite.x`.
+
+Друга половина лаби — **час життя**. Усе дотепер було автоматичним: `CPU cpu{}` помирає наприкінці `main`. **Купа** (`new` / `delete` або вказівник-відрізач **усередині** чотирьох кілобайтів `ember`) — це пам'ять, яка живе, поки ви не скажете інакше. Забудете `delete` — на вас насварить LeakSanitizer. Зробите `delete` двічі — насварить ASan. А завислий вказівник — це вказівник, чий об'єкт на купі вже зник.
+
+Записи цього тижня — це **спрайти**: `x, y, vx, vy, alive`. Ви малюєте їх через `PLOT` на кожному кроці. Послідовність записів, які роблять роботу на екрані, а не табличка полів, яку треба заповнити.
+
+---
+
+## Теорія
+
+### 1. `struct` — це поля поруч, у яких є імена
 
 ```cpp
 struct Sprite {
@@ -31,13 +31,13 @@ Sprite s{10, 5, 1, 0, true};
 s.x = s.x + s.vx;
 ```
 
-Fields have types. The compiler lays them out in order, **padding** for alignment (a `bool` after a `uint16_t` may not be 3 bytes). Print `sizeof(Sprite)` and `offsetof` (or dump `&s.x`, `&s.y`) this week. The dump is the lecture on layout.
+Поля мають типи. Компілятор розкладає їх по порядку й додає **заповнювачі** заради вирівнювання (`bool` після `uint16_t` може стояти не через 3 байти). Цього тижня надрукуйте `sizeof(Sprite)` і `offsetof` (або дамп `&s.x` і `&s.y`). Цей дамп і є лекція про розкладку.
 
-An **array of structs** `Sprite sprites[8];` is Lab 5 plus Lab 6. A **struct of arrays** (`xs[8], ys[8]`) is sometimes faster; you don't need it. Nested structs (`CPU` has `Flags` has `bool z`) are fine.
+**Масив структур** `Sprite sprites[8];` — це Lab 5 плюс Lab 6. **Структура з масивів** (`xs[8], ys[8]`) інколи швидша; вам вона не потрібна. Вкладені структури (`CPU` містить `Flags`, а той містить `bool z`) — нормально.
 
-**Aggregate init** `{ ... }` zeroes missing tail fields. Prefer it.
+**Агрегатна ініціалізація** `{ ... }` занулює поля, яким не дісталось значень. Користуйтесь нею.
 
-### 2. `enum class` is a typed set of integers
+### 2. `enum class` — це типізований набір цілих
 
 ```cpp
 enum class Op : std::uint8_t {
@@ -48,132 +48,125 @@ enum class Op : std::uint8_t {
 };
 ```
 
-The values are not yours to choose: copy them from [ISA.md](ISA.md). What you gain is that `Op::Add` cannot be mixed with `int` without a cast — so a decoded opcode and a raw byte stop being the same type, and the compiler starts catching a class of bug it could not see before. Your `switch (op)` becomes `switch (static_cast<Op>(byte))`, or you store `Op` after decode. Unknown bytes stay an error, not a silent `Nop`.
+Значення не ви обираєте — вони переписуються з [ISA.uk.md](ISA.uk.md). Вигода в іншому: `Op::Add` не змішується з `int` без явного приведення, а отже розібраний опкод і сирий байт перестають бути одним типом, і компілятор починає ловити цілий клас багів, якого раніше не бачив. Ваш `switch (op)` стає `switch (static_cast<Op>(byte))` — або ви зберігаєте `Op` одразу після розбору. Невідомі байти лишаються помилкою, а не тихим `Nop`.
 
-### 3. Three lifetimes
+### 3. Три часи життя
 
-| Where | Created | Destroyed | Ember analogue |
+| Де | Коли виникає | Коли зникає | Аналог в `ember` |
 |---|---|---|---|
-| **Static / global** | Before `main` | After `main` | The `Memory` object if you make it global (don't) |
-| **Automatic (stack)** | Entering the block | Leaving the block | `CPU cpu` in `main`; locals in `step` |
-| **Dynamic (heap)** | `new T` | `delete p` | A host `new Sprite[]`, **or** a guest heap: `0xC00`–`0xEFF` with an allocation pointer |
+| **Статична / глобальна** | до `main` | після `main` | об'єкт `Memory`, якщо зробити його глобальним (не робіть) |
+| **Автоматична (стек)** | на вході в блок | на виході з блока | `CPU cpu` у `main`; локальні змінні в `step` |
+| **Динамічна (купа)** | `new T` | `delete p` | `new Sprite[]` на хості **або** купа гостя: `0xC00`–`0xEFF` з вказівником виділення |
 
-This lab you do the **host** side: one `new`/`delete` run three ways, so ASan tells you what a dangling pointer and a double free actually look like. `ember` reserves `0xC00`–`0xEFF` for a guest heap, and giving it an `ALLOC` is the Stretch — the reserved region on your memory map is enough for now.
+Цього тижня ви робите **хостову** половину: один `new`/`delete`, прогнаний трьома способами, щоб ASan показав вам, як насправді виглядають завислий вказівник і подвійне звільнення. Регіон `0xC00`–`0xEFF` в `ember` зарезервований під купу гостя, а зробити для неї `ALLOC` — це Stretch; поки що досить позначити регіон на карті пам'яті.
 
-Rules: every `new` has one `delete`; every `new[]` has `delete[]`. After `delete`, the pointer is **dangling** — set it to `nullptr`. Do not use a dangling pointer. **Garbage** (leak) is a heap object with no pointer left; **dangling** is a pointer with no object left. They are opposites. Both are bugs.
+Правила: у кожного `new` рівно один `delete`; у кожного `new[]` — `delete[]`. Після `delete` вказівник **завис** — присвойте йому `nullptr`. Завислим вказівником не користуються. **Витік** — це об'єкт на купі, на який не лишилось жодного вказівника; **завислий вказівник** — це вказівник, у якого не лишилось об'єкта. Вони протилежні. Обидва — баги.
 
-### 4. A note on `CPU&`
+### 4. Про `CPU&`
 
-You will see `step(CPU& cpu)` in this lab's code. `T&` is a **reference**: a
-pointer that cannot be null and needs no `*` at the call site. Use it for now as
-"pass the machine itself, not a copy of it" — the full treatment, and when to
-prefer `T`, `T*` or `T&`, is [Lab 7](lab-07-call-and-return.md)'s subject.
+У коді цієї лаби вам трапиться `step(CPU& cpu)`. `T&` — це **посилання**: вказівник, який не може бути порожнім і якому не потрібна зірочка в місці виклику. Поки що сприймайте його як «передати саму машину, а не її копію» — повний розбір і те, коли обирати `T`, `T*` чи `T&`, буде темою [Лаби 7](lab-07-call-and-return.md).
 
-### Prove it to yourself (notes §§1–3)
+### Перевірте самі (notes §§1–3)
 
-1. `struct P { char c; int n; };` print `sizeof(P)`. Why not 5?
-2. `enum class Color { Red, Green }; Color c = Color::Red;` then try `c = 1;`
-3. `int* p = new int{42}; std::cout << *p; delete p; std::cout << *p;` with ASan.
-4. `new int` without `delete`, with `ASAN_OPTIONS=detect_leaks=1`. On Linux and in WSL you get a leak report. **On macOS with an Apple chip you get `detect_leaks is not supported on this platform`** — that is expected; see [errors.notes.md §3](errors.notes.md).
-5. Two `Sprite` values in an array; a loop that moves them and `plot`s.
+1. `struct P { char c; int n; };` — надрукуйте `sizeof(P)`. Чому не 5?
+2. `enum class Color { Red, Green }; Color c = Color::Red;`, потім спробуйте `c = 1;`
+3. `int* p = new int{42}; std::cout << *p; delete p; std::cout << *p;` з ASan.
+4. `new int` без `delete`, із `ASAN_OPTIONS=detect_leaks=1`. На Linux і у WSL ви отримаєте звіт про витік. **На macOS із чипом Apple ви отримаєте `detect_leaks is not supported on this platform`** — так і має бути, див. [errors.notes.md §3](errors.notes.md).
+5. Два `Sprite` у масиві; цикл, який їх рухає й малює через `plot`.
 
 ---
 
-## Project step: records that move, and a heap you can see
+## Крок проєкту: записи, які рухаються, і купа, яку видно
 
-### Milestones
+### Етапи
 
-**M1 — Refactor to structs + enum.**
-`struct Flags`, `struct CPU`, `enum class Op`. `sizeof(CPU)` in the README. `step` switches on `Op`. No behaviour change — tag `lab-06` will still run Lab 5 programs. The job: *name the layout you already had.*
+**M1 — рефакторинг у структури й перелік.**
+`struct Flags`, `struct CPU`, `enum class Op`. `sizeof(CPU)` у README. `step` перемикається по `Op`. Поведінка не змінюється: під тегом `lab-06` програми з Lab 5 мають працювати так само. Завдання в тому, щоб **дати ім'я розкладці, яка у вас і так уже була**.
 
-**M2 — Sprites (records + array).**
-`struct Sprite { uint8_t x, y; int8_t vx, vy; bool alive; };` and `Sprite sprites[8]` on the host. Command `sprite <i> <x> <y> <vx> <vy>` fills one. Command `tick` updates all alive sprites (bounce off the 64×32 edges) and `show`s. A demo: two sprites bouncing.
+**M2 — спрайти (записи плюс масив).**
+`struct Sprite { uint8_t x, y; int8_t vx, vy; bool alive; };` і `Sprite sprites[8]` на хості. Команда `sprite <i> <x> <y> <vx> <vy>` заповнює один. Команда `tick` рухає всі живі спрайти (з відскоком від країв екрана 64×32) і робить `show`. Демонстрація: два спрайти стрибають.
 
-**M3 — Host new/delete, on purpose.**
-A *temporary* `scratch.cpp` (same `c++` line as the notes) run three times: `new` and forget (**leak**), `new`/`delete`/read (**use-after-free**), `new`/`delete`/`delete` (**double-free**). Paste the sanitizer output for each and add a one-line moral.
+**M3 — `new`/`delete` на хості, свідомо.**
+*Тимчасовий* `scratch.cpp` (той самий рядок `c++`, що й у notes), прогнаний тричі: `new` і забути (**витік**), `new`/`delete`/прочитати (**читання після звільнення**), `new`/`delete`/`delete` (**подвійне звільнення**). Вставте вивід санітайзера для кожного випадку й додайте по одному рядку висновку.
 
-**On macOS with an Apple chip the leak case produces no report** — LeakSanitizer is not available there, and no configuration fixes it. Two ways to pass this milestone, both fully acceptable:
+**На macOS із чипом Apple випадок із витоком не дасть жодного звіту** — LeakSanitizer там недоступний, і жодні налаштування цього не змінять. Здати цей етап можна двома способами, обидва зараховуються:
 
-- run that one case in Linux, WSL or Docker and paste the real report; **or**
-- paste the `detect_leaks is not supported on this platform` line as evidence you tried, and explain the leak in two sentences: the object is alive, the last pointer to it is gone, nobody can ever free it.
+- прогнати саме цей випадок у Linux, WSL або Docker і вставити справжній звіт; **або**
+- вставити рядок `detect_leaks is not supported on this platform` як доказ спроби й пояснити витік двома реченнями: об'єкт живий, останній вказівник на нього зник, звільнити його вже нікому.
 
-Say in the README which route you took and why. Delete `scratch.cpp` before the tag if you want a clean tree; keep the write-up.
+У README напишіть, який шлях обрали й чому. Перед тегом `scratch.cpp` можна видалити, якщо хочете чисте дерево; опис лишіть.
 
-### Definition of done
+### Коли вважати готовим
 
-- `CPU` / `Flags` / `Op` are structs/enum; `sizeof` documented.
-- At least two bouncing sprites; `tick` + `show`.
-- The heap region `0xC00`–`0xEFF` marked on your README's memory map, even though nothing writes there yet.
-- Use-after-free and double-free demonstrated with pasted sanitizer output; leak either demonstrated on Linux/WSL or explained, with the platform note in the README.
-- Repo tagged `lab-06`.
-
----
-
-## Levels
-
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
-
-### Basic — "the machine has a shape" (~7–9 hours)
-- `struct Flags`, `struct CPU`, `enum class Op : std::uint8_t` with the values from [ISA.md](ISA.md).
-- `step` switches on `Op`, not on a raw byte. Unknown bytes are still an error.
-- **No behaviour change**: every Lab 5 program still runs. This milestone is a refactor.
-- `sizeof(CPU)` and the field layout in the README.
-- Repo tagged `lab-06`.
-
-### Standard — target (~12–14 hours)
-- Everything in **Definition of done** above.
-- `struct Sprite` and `Sprite sprites[8]`; `sprite` and `tick` commands; at least two sprites bouncing off the 64×32 edges.
-- Two sanitizer reports pasted and explained: use-after-free and double-free. (Leaks: see M3 — on Apple Silicon you explain instead of paste.)
-- The full memory map in your README, heap region marked even though nothing writes there yet.
-
-### Advanced — distinction (~18–20 hours)
-- Everything above, plus the Stretch guest heap: `ALLOC` as a bump allocator over `0xC00`–`0xEFF`, `C` set when it does not fit, dump after two allocations.
-- A real leak report produced on Linux or in WSL/Docker.
-- A tagged `struct Value` and a note on unions vs tagged structs, or a guest `FREE` as a free list.
+- `CPU`, `Flags` і `Op` — це структури й перелік; `sizeof` задокументований.
+- Щонайменше два спрайти стрибають; працюють `tick` і `show`.
+- Регіон купи `0xC00`–`0xEFF` позначений на карті пам'яті у вашому README, хоч туди поки ніхто й не пише.
+- Читання після звільнення й подвійне звільнення показані вставленим виводом санітайзера; витік або показаний на Linux/WSL, або пояснений — із приміткою про платформу в README.
+- Тег `lab-06`.
 
 ---
 
-## Deliverable checklist
+## Рівні
 
-- [ ] Structs + `enum class Op`; layout/`sizeof` in the README.
-- [ ] `Sprite sprites[8]`; bounce demo.
-- [ ] Sanitizer reports for use-after-free and double-free, plus the leak (report or documented platform limit), and the fixes.
-- [ ] Git tag `lab-06`.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
 
----
+### Basic — «у машини з'явилась форма» (~7–9 годин)
+- `struct Flags`, `struct CPU`, `enum class Op : std::uint8_t` зі значеннями з [ISA.uk.md](ISA.uk.md).
+- `step` перемикається по `Op`, а не по сирому байту. Невідомі байти й далі помилка.
+- **Поведінка не змінилась**: усі програми з Lab 5 працюють. Цей етап — рефакторинг.
+- `sizeof(CPU)` і розкладка полів у README.
+- Тег `lab-06`.
 
-## Reflection — explain it at the whiteboard
+### Standard — цільовий (~12–14 годин)
+- Усе з розділу **Коли вважати готовим**.
+- `struct Sprite` і `Sprite sprites[8]`; команди `sprite` і `tick`; щонайменше два спрайти, які відскакують від країв 64×32.
+- Два звіти санітайзера, вставлені й пояснені: читання після звільнення й подвійне звільнення. (Про витоки див. M3: на Apple Silicon ви пояснюєте замість того, щоб вставляти.)
+- Повна карта пам'яті у вашому README, регіон купи позначений, хоч туди ще ніхто не пише.
 
-1. Draw `Sprite` in memory. Where is padding, if any? How did you find out?
-2. `enum` vs `enum class` vs `#define ADD 0x10`. Why bother?
-3. Stack vs heap: who allocates, who frees? Print `&local` and the pointer from `new` with `std::cout` — what is different?
-4. Leak vs dangling vs double-free. Which sanitizer message is which?
-5. A bump allocator only ever moves forward. What can it not do that `delete` can? What would it have to store to make `FREE` possible?
-7. Where do the heap and the stack sit in the [memory map](ISA.md#2-memory-map)? Which way does each one grow, and what happens on a real machine when they meet?
-6. Why pass `CPU&` into `step` instead of copying `CPU` by value?
-
----
-
-## Stretch
-
-**A guest heap.** `0xC00`–`0xEFF` is reserved for it. `CPU` holds a `uint16_t heap_ptr` starting at `HEAP_LO`; the `ALLOC` opcode (`0x60`) allocates `A` bytes, puts the block's address in `H` and advances the pointer. No room — set `C`, leave `H` alone. Dump the region after two allocations and explain why there is no gap between the blocks.
-
-A tagged `struct Value { enum class Kind { Byte, Addr, SpriteId }; uint16_t bits; };` and a one-page note on unions vs tagged structs (unions: same memory, *you* remember the kind; tagged: the kind is in the bytes). Guest `free` as a free-list (a **linked list** preview of Lab 8). `std::unique_ptr<Sprite>` as the host version of "delete is in the destructor" — look, don't rewrite the course.
+### Advanced — відмінно (~18–20 годин)
+- Усе вище плюс купа гостя зі Stretch: `ALLOC` як відрізач по `0xC00`–`0xEFF`, `C` виставляється, коли не влазить, дамп після двох виділень.
+- Справжній звіт про витік, отриманий на Linux або у WSL/Docker.
+- Тегований `struct Value` і нотатка про об'єднання проти тегованих структур, або `FREE` у гостя через список вільних блоків.
 
 ---
 
-## Resources
+## Чекліст здачі
 
-**Watch**
+- [ ] Структури й `enum class Op`; розкладка та `sizeof` у README.
+- [ ] `Sprite sprites[8]`; демонстрація з відскоком.
+- [ ] Звіти санітайзера про читання після звільнення й подвійне звільнення, а також витік (звіт або задокументоване обмеження платформи), і виправлення до них.
+- [ ] Тег `lab-06`.
 
-- [Stack vs Heap (10 min, many clones; pick one that draws growing arrows)](https://www.youtube.com/watch?v=5OJRqkYbK-4) — then verify with *your* ASan reports, not the video's word.
+---
 
-**Read**
+## На захисті — поясніть біля дошки
 
-- learncpp.com — [structs](https://www.learncpp.com/cpp-tutorial/introduction-to-structs-members-and-member-selection/), [enum classes](https://www.learncpp.com/cpp-tutorial/scoped-enumerations-enum-classes/), [dynamic allocation](https://www.learncpp.com/cpp-tutorial/dynamic-memory-allocation-with-new-and-delete/).
-- cppreference — [`offsetof`](https://en.cppreference.com/w/cpp/types/offsetof), [RAII](https://en.cppreference.com/w/cpp/language/raii) (the *next* idea after raw `new`).
-- AddressSanitizer — [use-after-free examples](https://github.com/google/sanitizers/wiki/AddressSanitizer).
+1. Намалюйте `Sprite` у пам'яті. Де заповнювачі, якщо вони є? Як ви про це дізнались?
+2. `enum` проти `enum class` проти `#define ADD 0x10`. Навіщо морочитись?
+3. Стек проти купи: хто виділяє, хто звільняє? Надрукуйте через `std::cout` `&local` і вказівник, отриманий від `new` — що в них різного?
+4. Витік проти завислого вказівника проти подвійного звільнення. Яке повідомлення санітайзера про що?
+5. Відрізач уміє рухатись тільки вперед. Чого він не вміє з того, що вміє `delete`? Що йому довелось би зберігати, щоб став можливим `FREE`?
+6. Де на [карті пам'яті](ISA.uk.md#2-карта-памяті) стоять купа й стек? Куди росте кожен із них і що станеться на справжній машині, коли вони зустрінуться?
+7. Чому в `step` передають `CPU&`, а не копію `CPU`?
+
+---
+
+## Якщо встигаєте
+
+**Купа гостя.** Під неї зарезервовано `0xC00`–`0xEFF`. `CPU` тримає `uint16_t heap_ptr`, який стартує з `HEAP_LO`; опкод `ALLOC` (`0x60`) виділяє `A` байтів, кладе адресу блока в `H` і посуває вказівник. Не влізло — виставити `C` і `H` не чіпати. Зробіть дамп регіону після двох виділень і поясніть, чому між блоками немає дірки.
+
+Тегований `struct Value { enum class Kind { Byte, Addr, SpriteId }; uint16_t bits; };` і сторінка нотаток про об'єднання проти тегованих структур (об'єднання: та сама пам'ять, а вид пам'ятаєте **ви**; теговані: вид лежить у самих байтах). `free` у гостя через список вільних блоків (передчуття **зв'язного списку** з Lab 8). `std::unique_ptr<Sprite>` як хостова версія ідеї «`delete` живе в деструкторі» — подивитись, а не переписувати весь курс.
+
+---
+
+## Що почитати й подивитись
+
+**Подивитись**
+
+- [Stack vs Heap (10 хв; клонів багато, беріть той, де малюють стрілки, що ростуть назустріч)](https://www.youtube.com/watch?v=5OJRqkYbK-4) — а потім перевірте це **своїми** звітами ASan, а не словами з відео.
+
+**Почитати**
+
+- learncpp.com — [структури](https://www.learncpp.com/cpp-tutorial/introduction-to-structs-members-and-member-selection/), [`enum class`](https://www.learncpp.com/cpp-tutorial/scoped-enumerations-enum-classes/), [динамічне виділення пам'яті](https://www.learncpp.com/cpp-tutorial/dynamic-memory-allocation-with-new-and-delete/).
+- cppreference — [`offsetof`](https://en.cppreference.com/w/cpp/types/offsetof), [RAII](https://en.cppreference.com/w/cpp/language/raii) (**наступна** ідея після голого `new`).
+- AddressSanitizer — [приклади читання після звільнення](https://github.com/google/sanitizers/wiki/AddressSanitizer).

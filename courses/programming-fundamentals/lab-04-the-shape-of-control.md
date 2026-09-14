@@ -1,58 +1,57 @@
-# Lab 04 — The Shape of Control: Conditions, Loops, Scope
+# Лаба 04 — Форма керування: умови, цикли, область видимості
 
-> "Structured programming is a small set of shapes. Everything else is those shapes nested."
+> «Структурне програмування — це кілька форм. Усе решта — ці самі форми, вкладені одна в одну.»
 
-**Weeks:** 7–8 · **Language focus:** booleans and comparisons, `if`/`else`, `switch`, `while`/`do`/`for`, short-circuit, block scope and lifetime · **Project step:** `JMP`/`JZ`/`JNZ`, a loop in bytecode, linear search through memory · **Course:** [EN](README.md) · [UK](README.uk.md) · **Previous:** [Lab 03](lab-03-addresses-not-names.md) · **Notes:** [theory + experiments](lab-04-the-shape-of-control.notes.md)
+**Тижні:** 7–8 · **Про мову:** булеві значення й порівняння, `if`/`else`, `switch`, `while`/`do`/`for`, коротке замикання, область видимості блока і час життя · **Крок проєкту:** `JMP`/`JZ`/`JNZ`, цикл у байткоді, лінійний пошук по пам'яті · **Курс:** [EN](README.md) · [UK](README.uk.md) · **Попередня:** [Лаба 03](lab-03-addresses-not-names.md) · **Notes:** [теорія і досліди](lab-04-the-shape-of-control.notes.md)
 
 ---
 
-## This lab's feature
+## Про що ця лаба
 
-A program that only runs top to bottom is a calculator. A **computer** can skip, repeat, and choose. In C++ those shapes are `if`, `switch`, and the loops. In a CPU they are **jumps**: write a new value into `PC`.
+Програма, яка виконується тільки згори донизу, — це калькулятор. **Комп'ютер** уміє пропускати, повторювати й вибирати. У C++ ці форми звуться `if`, `switch` і цикли. У процесорі це **стрибки**: записати нове значення в `PC`.
 
-That translation is the lecture. `while (a != 0) { a = a - 1; }` is, in ember, four instructions:
+Ось цей переклад і є вся лекція. `while (a != 0) { a = a - 1; }` в `ember` — це чотири інструкції:
 
 ```txt
        LOADI A, 3
-loop:  OUTN              ; print A
-       DEC   A           ; sets Z when A reaches 0
+loop:  OUTN              ; надрукувати A
+       DEC   A           ; виставляє Z, коли A дійшов до нуля
        JNZ   loop
        HALT
 ```
 
-The assembled bytes and the address of each line are in
-[ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) — check yours against them.
+Зібрані байти й адресу кожного рядка шукайте в [ISA.uk.md §9](ISA.uk.md#9-дві-програми-щоб-перевірити-себе) — звіряйте свої з ними.
 
-You will implement `JMP` (always) and `JZ`/`JNZ` (if Z is set / not set — Lab 2's flags finally do work), plus `CMP`, which subtracts without storing so that `JZ` has something to read. Then you will write a **linear search**: given a byte and a region of memory, find the first address holding it, or report miss. The sequence is `ember`'s RAM, walked with the `H` register from Lab 3. The loop exists twice: in C++ (`step` is a loop) and as guest instructions.
+Вам треба реалізувати `JMP` (завжди) і `JZ`/`JNZ` (якщо Z виставлений / не виставлений — прапорці з Lab 2 нарешті беруться до роботи), а ще `CMP`, який віднімає, не зберігаючи результат, щоб `JZ` було що читати. Далі ви напишете **лінійний пошук**: дано байт і шматок пам'яті — знайти першу адресу, де він лежить, або сказати, що не знайшли. Послідовність — це оперативна пам'ять `ember`, а ходить по ній регістр `H` із Lab 3. Цикл існуватиме двічі: у C++ (`step` — це цикл) і як інструкції гостя.
 
-Scope is the other half. A name lives in a `{ }` block. The same identifier in an inner block **shadows** the outer one. `static` local variables survive across calls; ordinary locals die when the block ends. Print both with `std::cout` in the notes snippet; then stop using `static` as a party trick.
+Друга половина лаби — область видимості. Ім'я живе в блоці `{ }`. Той самий ідентифікатор у внутрішньому блоці **затінює** зовнішній. Локальні змінні з `static` переживають виклики; звичайні вмирають разом із блоком. Надрукуйте і те, і те через `std::cout` у фрагменті з notes — і після цього перестаньте вживати `static` як фокус на публіку.
 
 ---
 
-## Theory
+## Теорія
 
-### 1. Comparisons produce booleans; C++ also has truthy integers
+### 1. Порівняння дають булеві значення, але в C++ «істинним» буває й число
 
-`== != < > <= >=` produce `bool` (`true`/`false`, which print as 1/0 unless you use `std::boolalpha`). In `if (x)` a non-zero integer is true. Prefer actual `bool` and `==`. The bug of the decade is `if (x = 0)` — assignment, not comparison — which is *true* if you write `if (x = 1)` and false if `if (x = 0)`. Compile with `-Werror` and the warning `using the result of an assignment as a condition` saves you. Still know it.
+`== != < > <= >=` дають `bool` (`true`/`false`, які друкуються як 1 і 0, якщо не вмикати `std::boolalpha`). У `if (x)` будь-яке ненульове ціле вважається істиною. Краще беріть справжній `bool` і `==`. Головний баг десятиліття — `if (x = 0)`: це присвоєння, а не порівняння, і `if (x = 1)` завжди **істинне**, а `if (x = 0)` завжди хибне. З `-Werror` вас рятує попередження `using the result of an assignment as a condition`. Але знати це все одно треба.
 
-Logical ops: `!` not, `&&` and, `||` or. They are **not** the bitwise ops from Lab 2. `1 && 2` is `true`; `1 & 2` is `0`.
+Логічні операції: `!` не, `&&` і, `||` або. Це **не** бітові операції з Lab 2. `1 && 2` це `true`; `1 & 2` це `0`.
 
-**Short-circuit:** `A && B` does not evaluate `B` if `A` is false; `A || B` does not evaluate `B` if `A` is true. This is a feature: `if (p && *p == 3)` is safe. It is also a footgun: `if (f() && g())` might not call `g`.
+**Коротке замикання:** `A && B` не обчислює `B`, якщо `A` хибне; `A || B` не обчислює `B`, якщо `A` істинне. Це зручність: `if (p && *p == 3)` безпечний. Це ж і пастка: у `if (f() && g())` `g` може не викликатись узагалі.
 
-### 2. The shapes
+### 2. Форми
 
-**`if (cond) stmt; else stmt;`** — the else binds to the nearest `if`. Braces always, even for one line. You will thank yourself.
+**`if (умова) щось; else щось;`** — `else` чіпляється до найближчого `if`. Фігурні дужки ставте завжди, навіть на один рядок. Самі собі подякуєте.
 
-**`switch (n) { case 1: ... break; default: ... }`** — `n` must be an integer (or enum, Lab 6). Without `break`, execution **falls through**. Your `step()` is a `switch (op)` — that is the right tool. Fall-through only when you mean it, and comment `[[fallthrough]]`.
+**`switch (n) { case 1: ... break; default: ... }`** — `n` має бути цілим (або переліком, Lab 6). Без `break` виконання **провалюється** в наступний `case`. Ваш `step()` — це `switch (op)`, і це саме той інструмент, для якого `switch` придуманий. Провалюйтесь тільки свідомо і позначайте це `[[fallthrough]]`.
 
-**`while (cond) stmt`** — zero or more times. **`do stmt while (cond)`** — at least once. **`for (init; cond; next)`** — the loop with a counter. They all compile to tests and jumps. Nested loops: the inner runs fully for each outer step. A 2D scan is two `for`s (Lab 5); a linear search is one.
+**`while (умова) щось`** — нуль або більше разів. **`do щось while (умова)`** — щонайменше раз. **`for (ініціалізація; умова; крок)`** — цикл із лічильником. Усі троє компілюються в порівняння і стрибки. Вкладені цикли: внутрішній прокручується повністю на кожному кроці зовнішнього. Обхід таблиці — два `for` (Lab 5), лінійний пошук — один.
 
-Empty loop: `for (;;)` is `while (true)`. `ember`'s `run` is that, until `HALT` or a step limit (add a limit of e.g. 100000 so a bad `JMP` cannot hang the process).
+Порожній цикл: `for (;;)` — це `while (true)`. `run` в `ember` саме такий: крутиться до `HALT` або до ліміту кроків (поставте ліміт, скажімо, 100000, щоб зламаний `JMP` не повісив процес).
 
-### 3. Linear search is a loop with an exit
+### 3. Лінійний пошук — це цикл із виходом
 
 ```cpp
-// find first i in [lo, hi) with mem.get(i) == needle; return hi if miss
+// знайти перше i в [lo, hi), де mem.get(i) == needle; якщо промах — повернути hi
 std::uint16_t find(const Memory& mem, std::uint16_t lo, std::uint16_t hi, Byte needle) {
     for (std::uint16_t i = lo; i < hi; ++i) {
         if (mem.get(i) == needle) return i;
@@ -61,158 +60,152 @@ std::uint16_t find(const Memory& mem, std::uint16_t lo, std::uint16_t hi, Byte n
 }
 ```
 
-If the region is **sorted**, you may stop early when `mem.get(i) > needle` — that is still linear, just a shorter average. Binary search can wait; understanding *this* loop is the lab.
+Якщо ділянка **відсортована**, можна зупинятись раніше, щойно `mem.get(i) > needle` — складність та сама, просто в середньому коротше. Двійковий пошук почекає; лаба про те, щоб зрозуміти **цей** цикл.
 
-You will write this twice. In C++ it is the `find` command above. In `ember` it is the same four moves, spelled with the instructions you now have — `H` is `i`, `INCH` is `++i`, `CMP` is `==`, `JZ` is the `if`:
+Писати його ви будете двічі. У C++ це команда `find` вище. В `ember` — ті самі чотири рухи, записані інструкціями, які у вас тепер є: `H` — це `i`, `INCH` — це `++i`, `CMP` — це `==`, `JZ` — це `if`:
 
 ```txt
         LOADH H, 0x0800      ; i = lo
-        LOADI B, 0x41        ; the needle
+        LOADI B, 0x41        ; що шукаємо
 loop:   LOAD  A, [H]         ; mem[i]
-        CMP   A, B           ; sets Z if equal
+        CMP   A, B           ; виставляє Z, якщо рівні
         JZ    found
         INCH                 ; ++i
-        ...                  ; stop at hi -- how you detect that is yours
+        ...                  ; зупинитись на hi — як саме, вирішуєте ви
         JMP   loop
-found:  HLOW                 ; or however you choose to report the index
+found:  HLOW                 ; або як ви ще надумаєте повідомити індекс
         OUTN
         HALT
 ```
 
-Two things are deliberately left to you: how the loop knows it reached `hi`, and how it reports a miss. Both have more than one right answer; pick one, write it in the README, and be ready to defend it.
+Дві речі навмисно лишені вам: як цикл дізнається, що дійшов до `hi`, і як він повідомляє про промах. Правильних відповідей більше ніж одна; оберіть свою, запишіть у README і будьте готові її захистити.
 
-### 4. Scope, lifetime, and the membrane
+### 4. Область видимості, час життя і перегородка між ними
 
-A **block** `{ }` is a scope. Names declared inside are invisible outside. Inner `int x` hides outer `x` until the inner block ends. This is not a puzzle; it is how you keep temporaries from leaking.
+**Блок** `{ }` — це область видимості. Імена, оголошені всередині, зовні не видно. Внутрішній `int x` ховає зовнішній `x` до кінця блока. Це не головоломка, це спосіб не давати тимчасовим змінним розтікатись.
 
 ```cpp
 int x = 1;
 {
-    int x = 10;      // inner x
+    int x = 10;      // внутрішній x
     static int c = 0;
     c = c + 1;
 }
-// outer x is still 1; inner x is gone; c still exists but the *name* c is gone
+// зовнішній x досі 1; внутрішній зник; c ще існує, але *імені* c більше немає
 ```
 
-**Lifetime:** automatic (`auto`, the default) storage dies at the end of the block. **`static` local** is initialized once and lives until the program ends — the name is still scoped. **Heap** waits until Lab 6. Shadowing is just an inner name hiding an outer one. The global `::x` (unary `::`) reaches a global when an inner name hid it; you almost never need this if you don't use globals. Don't use globals. Pass a `CPU&`.
+**Час життя:** автоматична пам'ять (те, що за замовчуванням) помирає з кінцем блока. **Локальна `static`** ініціалізується один раз і живе до кінця програми — але ім'я лишається обмеженим блоком. **Купа** чекає на Lab 6. Затінення — це просто внутрішнє ім'я, яке ховає зовнішнє. Через `::x` (унарний `::`) можна дістатись до глобальної змінної, яку затінили; вам це майже ніколи не знадобиться, якщо не заводити глобальних змінних. Не заводьте. Передавайте `CPU&`.
 
-### Prove it to yourself (notes §§1–4)
+### Перевірте самі (notes §§1–4)
 
-1. `if (x = 1)` vs `if (x == 1)` — what does each do? Does `-Werror` save you?
-2. `true && (std::cout << "A", false) && (std::cout << "B");` — what prints? (comma operator, or two `if`s: `f() && g()` with prints inside.)
-3. `switch` without `break` on `n = 1` with `case 1: print 1; case 2: print 2;`
-4. Nested `for` that prints a 3×3 grid of `(i,j)`.
-5. The shadowing snippet in §4, with prints; add a `for` that uses both a `static` counter and an ordinary local, and explain which one persists.
-
----
-
-## Project step: the CPU learns to jump
-
-### Milestones
-
-**M1 — `step` is already a `switch`. Make it total.**
-Every known opcode is a `case`. `default:` sets an error: "unknown opcode 0x.." and halt. No silent NOP for garbage. This is `switch` used as a decoder, which is what it's for.
-
-**M2 — Jumps.**
-The `0x3_` group from [ISA.md](ISA.md), plus `CMP` (`0x1A`):
-
-- `JMP addr16` — `PC = addr`. Do **not** then add 3. This is the single most common bug in this lab.
-- `JZ addr16` — if `Z` then `PC = addr`, else `PC += 3`.
-- `JNZ addr16` — the other way round.
-- `CMP A, B` — compute `A - B`, set `Z`/`N`/`C`, throw the result away.
-
-Remember [ISA.md §3](ISA.md#3-flags): `LOAD` and `LOADI` do **not** set flags. A `JZ` straight after a `LOAD` reads whatever the last ALU instruction left behind.
-
-`run` has a max-steps guard. Document the limit and what it prints when it trips.
-
-**M3 — A loop in bytecode.**
-The countdown from [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against): poke the seven bytes, `run`, get `3 2 1`. Trace in the README: one line per `step` with `PC`, `A` and `Z`. Then the equivalent C++ `while` beside it. Same shape, two notations.
-
-**M4 — Linear search, twice.**
-1. Command `find <lo> <hi> <byte>` implemented with the C++ loop above.
-2. An ember program (poked bytes, or a listing in the README you enter with `set`) that searches an 8-byte region at `0x800` for `0x41` and reports where it found it, or that it did not. You may `step` it in the defense.
-
-Write both listings in the README with an address column, the way
-[ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) does. You will thank
-yourself in Lab 8, when the assembler has to produce exactly those bytes.
-
-### Definition of done
-
-- `JMP`/`JZ`/`JNZ`/`CMP`; `run` cannot hang forever.
-- Unknown opcodes error out.
-- Countdown trace in the README next to the C++ `while`.
-- `find` command + a guest search program.
-- Repo tagged `lab-04`.
+1. `if (x = 1)` проти `if (x == 1)` — що робить кожен? Чи рятує `-Werror`?
+2. `true && (std::cout << "A", false) && (std::cout << "B");` — що надрукується? (Оператор кома; або два `if` із `f() && g()`, де всередині друк.)
+3. `switch` без `break` для `n = 1`, де `case 1:` друкує 1, а `case 2:` друкує 2.
+4. Вкладений `for`, який друкує сітку 3×3 з пар `(i,j)`.
+5. Фрагмент із затіненням із §4, з друком; додайте `for`, у якому є і `static`-лічильник, і звичайна локальна змінна, і поясніть, котра з них переживає ітерацію.
 
 ---
 
-## Levels
+## Крок проєкту: процесор учиться стрибати
 
-**Pick a landing spot before you start.** Basic is a real, passing lab — not a
-failure. Standard is the target. Advanced exists so that the people who arrive
-already knowing how to program have somewhere to go, and it is not extra credit
-for finishing early: it is a harder version of the same machine. Hours are for
-someone doing this subject for the first time.
+### Етапи
 
-### Basic — "it can loop" (~8–10 hours)
-- `step` is a total `switch`: every known opcode has a `case`, `default` reports `unknown opcode 0x..` and halts.
-- `JMP`, `JZ`, `JNZ`, `CMP` from [ISA.md](ISA.md). A taken jump sets `PC` and does **not** also add the size.
-- `run` has a documented max-step limit, so a bad `JMP` cannot hang the process.
-- The countdown from [ISA.md §9](ISA.md#9-two-programs-to-check-yourself-against) runs and prints `3 2 1`.
-- Repo tagged `lab-04`.
+**M1 — `step` і так уже `switch`. Зробіть його повним.**
+Кожен відомий опкод — окремий `case`. `default:` виставляє помилку «unknown opcode 0x..» і зупиняє машину. Ніяких тихих `NOP` для сміття. Це `switch` у ролі декодера, тобто саме те, для чого він і є.
 
-### Standard — target (~13–15 hours)
-- Everything in **Definition of done** above.
-- The countdown traced in the README (`PC`, `A`, `Z` per step) next to the equivalent C++ `while`. Same shape, two notations.
-- A `find <lo> <hi> <byte>` command written as a C++ loop.
-- The same linear search as a guest program, walking memory with `H` and `INCH`, printing the index or a miss marker.
+**M2 — стрибки.**
+Група `0x3_` з [ISA.uk.md](ISA.uk.md) плюс `CMP` (`0x1A`):
 
-### Advanced — distinction (~18 hours)
-- Everything above, plus `JC` / `JNC`, or `JG` / `JL` with signed comparison carefully defined.
-- A `b <addr>` breakpoint command: `run` until `PC == addr`.
-- Optional: a nested C++ loop in Godbolt with the `jmp` / `jcc` identified.
+- `JMP addr16` — `PC = addr`. І **не** додавати після цього ще 3. Це найчастіший баг цієї лаби.
+- `JZ addr16` — якщо `Z`, то `PC = addr`, інакше `PC += 3`.
+- `JNZ addr16` — навпаки.
+- `CMP A, B` — порахувати `A - B`, виставити `Z`/`N`/`C`, результат викинути.
+
+Пам'ятайте [ISA.uk.md §3](ISA.uk.md#3-прапорці): `LOAD` і `LOADI` прапорці **не чіпають**. `JZ` одразу після `LOAD` прочитає те, що лишила по собі остання інструкція ALU.
+
+У `run` є ліміт кроків. Запишіть, який він і що друкується, коли він спрацьовує.
+
+**M3 — цикл у байткоді.**
+Countdown із [ISA.uk.md §9](ISA.uk.md#9-дві-програми-щоб-перевірити-себе): покладіть сім байтів, зробіть `run`, отримайте `3 2 1`. Трейс у README: по рядку на кожен `step`, у ньому `PC`, `A` і `Z`. Поруч — той самий `while` на C++. Одна форма, два записи.
+
+**M4 — лінійний пошук, двічі.**
+1. Команда `find <lo> <hi> <byte>`, написана циклом на C++ із теорії вище.
+2. Програма всередині `ember` (покладені байти або лістинг у README, який ви набираєте через `set`), яка шукає `0x41` у восьмибайтовій ділянці на `0x800` і повідомляє, де знайшла — або що не знайшла. На захисті її можна прокрокувати через `step`.
+
+Обидва лістинги пишіть у README з колонкою адрес, як у [ISA.uk.md §9](ISA.uk.md#9-дві-програми-щоб-перевірити-себе). У Lab 8 ви собі за це подякуєте, коли асемблер муситиме видати рівно ці байти.
+
+### Коли вважати готовим
+
+- `JMP`/`JZ`/`JNZ`/`CMP` працюють; `run` не може зависнути назавжди.
+- Невідомі опкоди дають помилку.
+- Трейс countdown у README поруч із `while` на C++.
+- Команда `find` і програма пошуку всередині `ember`.
+- Тег `lab-04`.
 
 ---
 
-## Deliverable checklist
+## Рівні
 
-- [ ] `switch` decoder with `default` error; max-steps on `run`.
+**Оберіть рівень, перш ніж почнете.** Basic — це нормально здана лаба, а не провал. Standard — цільовий. Advanced існує для тих, хто прийшов уже вміючи програмувати, і це не бонус за швидкість, а складніша версія тієї самої машини. Години пораховані на людину, яка робить це вперше.
+
+### Basic — «воно вміє цикл» (~8–10 годин)
+- `step` — повний `switch`: кожен відомий опкод має `case`, а `default` друкує `unknown opcode 0x..` і зупиняє машину.
+- `JMP`, `JZ`, `JNZ`, `CMP` з [ISA.uk.md](ISA.uk.md). Узятий стрибок ставить `PC` і **не** додає ще й розмір.
+- У `run` є задокументований ліміт кроків, щоб зламаний `JMP` не повісив процес.
+- Countdown із [ISA.uk.md §9](ISA.uk.md#9-дві-програми-щоб-перевірити-себе) запускається й друкує `3 2 1`.
+- Тег `lab-04`.
+
+### Standard — цільовий (~13–15 годин)
+- Усе з розділу **Коли вважати готовим**.
+- Countdown простежений у README (`PC`, `A`, `Z` на крок) поруч із рівноцінним `while` на C++. Одна форма, два записи.
+- Команда `find <lo> <hi> <byte>`, написана циклом на C++.
+- Той самий лінійний пошук як програма-гість, яка ходить пам'яттю через `H` і `INCH` і друкує індекс або ознаку промаху.
+
+### Advanced — відмінно (~18 годин)
+- Усе вище плюс `JC` / `JNC` або `JG` / `JL` з акуратно визначеним знаковим порівнянням.
+- Команда точки зупину `b <addr>`: `run` до `PC == addr`.
+- За бажанням: вкладений цикл C++ у Godbolt із показаними `jmp` / `jcc`.
+
+---
+
+## Чекліст здачі
+
+- [ ] Декодер на `switch` із помилкою в `default`; ліміт кроків у `run`.
 - [ ] `JMP`, `JZ`, `JNZ`, `CMP`.
-- [ ] Countdown program traced.
-- [ ] C++ `find` and an ember search; both demonstrated.
-- [ ] Git tag `lab-04`.
+- [ ] Програма countdown із трейсом.
+- [ ] `find` на C++ і пошук усередині `ember`; показані обидва.
+- [ ] Тег `lab-04`.
 
 ---
 
-## Reflection — explain it at the whiteboard
+## На захисті — поясніть біля дошки
 
-1. Translate `while (a > 0) a = a - 1;` into tests and jumps. Draw `PC`.
-2. `&&` vs `&`. Give a case where replacing one with the other compiles but is wrong.
-3. Why does `if (x = 0)` compile? What flag makes it fail?
-4. `while` vs `do-while` vs `for` — which is the countdown, and could they all do it?
-5. What does short-circuit buy you with pointers? What does it cost with functions that have side effects?
-6. Explain shadowing with two boxes named `x`. When is `static int c` still alive after the block?
-7. Why does a taken `JMP` not also add 3 to `PC`? What does the machine do if it does?
-8. Why must `CMP` exist, when `SUB` already sets the flags?
-
----
-
-## Stretch
-
-`JG`/`JL` using the N and Z flags (you'll need to define signed compare carefully — this is why real ISAs have overflow flags). Or: compile a nested C++ loop in [Godbolt](https://godbolt.org/) and circle the `jcc` / `jmp` that *are* this lab. Optional: a `step` debugger command `b <addr>` (breakpoint) that `run`s until `PC == addr`.
+1. Перекладіть `while (a > 0) a = a - 1;` у порівняння й стрибки. Намалюйте `PC`.
+2. `&&` проти `&`. Наведіть випадок, коли заміна одного на інше компілюється, але працює не так.
+3. Чому `if (x = 0)` взагалі компілюється? Який прапорець компілятора робить це помилкою?
+4. `while` проти `do-while` проти `for` — котрий тут countdown, і чи впорались би всі три?
+5. Що дає коротке замикання у роботі з вказівниками? Чого воно коштує з функціями, які мають побічні ефекти?
+6. Поясніть затінення на двох коробках з іменем `x`. Коли `static int c` ще живий після виходу з блока?
+7. Чому взятий `JMP` не додає до `PC` ще й 3? Що робитиме машина, якщо додасть?
+8. Навіщо потрібен `CMP`, якщо `SUB` і так виставляє прапорці?
 
 ---
 
-## Resources
+## Якщо встигаєте
 
-**Watch**
+`JG`/`JL` на прапорцях N і Z (знакове порівняння доведеться визначити дуже акуратно — саме тому в справжніх наборах інструкцій є прапорець переповнення). Або: зберіть вкладений цикл C++ у [Godbolt](https://godbolt.org/) і знайдіть ті `jcc` / `jmp`, які **і є** ця лаба. За бажанням: команда точки зупину `b <addr>`, яка робить `run` до `PC == addr`.
 
-- Crash Course CS — [Instructions and Programs](https://www.youtube.com/watch?v=zltgXvg6r3k) — fetch-decode-execute, jumps.
-- Ben Eater — [Jump instructions](https://www.youtube.com/watch?v=Zg1NdPKoosU) if you liked the breadboard series.
+---
 
-**Read**
+## Що почитати й подивитись
 
-- learncpp.com — [If statements](https://www.learncpp.com/cpp-tutorial/if-statements-and-blocks/), [switch](https://www.learncpp.com/cpp-tutorial/switch-statement-basics/), [while](https://www.learncpp.com/cpp-tutorial/while-statement/), [for](https://www.learncpp.com/cpp-tutorial/for-statements/), [logical operators](https://www.learncpp.com/cpp-tutorial/logical-operators/).
-- Wikipedia — [Branch (computer science)](https://en.wikipedia.org/wiki/Branch_(computer_science)) and [Program counter](https://en.wikipedia.org/wiki/Program_counter). Two short pages; they name what you just built.
-- For *why* a `switch` is the right decoder, reread your own `cpu.cpp`. That is the most useful text on this page.
+**Подивитись**
+
+- Crash Course CS — [Instructions and Programs](https://www.youtube.com/watch?v=zltgXvg6r3k) — цикл «прочитати–розібрати–виконати» і стрибки.
+- Ben Eater — [Jump instructions](https://www.youtube.com/watch?v=Zg1NdPKoosU), якщо серія про макетну плату вам зайшла.
+
+**Почитати**
+
+- learncpp.com — [`if`](https://www.learncpp.com/cpp-tutorial/if-statements-and-blocks/), [`switch`](https://www.learncpp.com/cpp-tutorial/switch-statement-basics/), [`while`](https://www.learncpp.com/cpp-tutorial/while-statement/), [`for`](https://www.learncpp.com/cpp-tutorial/for-statements/), [логічні оператори](https://www.learncpp.com/cpp-tutorial/logical-operators/).
+- Вікіпедія — [Branch (computer science)](https://en.wikipedia.org/wiki/Branch_(computer_science)) і [Program counter](https://en.wikipedia.org/wiki/Program_counter). Дві короткі сторінки; вони дають назви тому, що ви щойно зібрали.
+- А щоб зрозуміти, **чому** декодер — це саме `switch`, перечитайте власний `cpu.cpp`. Це найкорисніший текст на цій сторінці.
