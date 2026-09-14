@@ -172,6 +172,24 @@ Same shape as the Python and JavaScript courses:
 (The lab files are in Ukrainian. The section names above are the headings you will
 actually see; this list is here so an English reader can navigate them.)
 
+### What lives where, so nothing is read twice
+
+Every thing has one home. If the other file needs it, it links rather than copies.
+This is not tidiness for its own sake: a first-year reads both files back to back,
+and every repetition reads as new information until they work out that it isn't.
+
+| Thing | Home |
+|---|---|
+| terms, theory, milestones, levels, checklist, defense questions | **the lab** |
+| code snippets, the build line, expected output, "if you're short on time" | **the notes** |
+| memory map, instruction set, calling convention | [ISA.md](ISA.md) |
+| the numbers to check against | [CHECKS.md](CHECKS.md) |
+| terminology, Ukrainian and English | [GLOSSARY.md](GLOSSARY.md) |
+
+The lab says **what you should come away with** from each experiment; the notes hold
+the experiment. That is why "Перевірте самі" in a lab is a table of takeaways, not a
+second copy of the code.
+
 ### A note on Levels, because the cohort is not uniform
 
 First-year groups arrive split: some wrote code at school, some have never opened
