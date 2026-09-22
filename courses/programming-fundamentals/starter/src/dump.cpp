@@ -36,13 +36,9 @@ void dump(const Memory& mem) {
         // The ASCII gutter.
         for (std::size_t col = 0; col < BYTES_PER_LINE; ++col) {
             Byte b = mem.data[row + col];
-            // TODO(lab-01, M2): when the byte IS printable, print the byte
-            //                   itself instead of the dot. One token changes.
-            //                   Hint: a Byte sent to std::cout prints as a
-            //                   character already - that is the whole joke of
-            //                   Lab 1. Right now every byte looks unprintable.
+        
             if (is_printable(b)) {
-                std::cout << '.';
+                std::cout << static_cast<char>(b);
             } else {
                 std::cout << '.';
             }
@@ -55,23 +51,26 @@ void dump(const Memory& mem) {
     std::cout << std::dec << std::setfill(' ');
 }
 
+#include "dump.hpp"
+#include <iostream>
+#include <iomanip>
+#include <bitset>
+
 void show_byte(Byte b) {
-    // TODO(lab-01, M3): print these four things on one line, separated by
-    // two spaces, then a newline:
-    //
-    //   1. b as a decimal number          -> 65
-    //      Careful: `std::cout << b` prints a CHARACTER, because Byte is a
-    //      one-byte type. Use static_cast<int>(b) to print the number.
-    //   2. b as hex, with a 0x prefix     -> 0x41
-    //      std::hex switches the stream; std::dec switches it back.
-    //   3. b as 8 binary digits, 0b first -> 0b01000001
-    //      There is no std::bin. Loop from bit 7 down to bit 0 and print
-    //      ((b >> i) & 1). That expression is Lab 2 arriving early.
-    //   4. b as a character in quotes     -> 'A'
-    //      Use is_printable(b); print '.' for bytes a terminal cannot show.
-    //
-    // Expected for `set 0 65` then `get 0`:
-    //   65  0x41  0b01000001  'A'
-    std::cout << "show_byte: not implemented yet (byte was "
-              << static_cast<int>(b) << ")\n";
+    // 1. Десятичный формат
+    std::cout << static_cast<int>(b) << "  ";
+
+    std::cout << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(2) 
+              << static_cast<int>(b) << std::dec << "  ";
+
+    // 3. Двоичный формат (0b01000001)
+    std::cout << "0b" << std::bitset<8>(b) << "  ";
+
+    // 4. Символьный формат ('A')
+    if (b >= 0x20 && b <= 0x7E) {
+        std::cout << "'" << static_cast<char>(b) << "'";
+    } else {
+        std::cout << "'.'";
+    }
+    std::cout << "\n";
 }
