@@ -31,6 +31,7 @@ static void print_help() {
               << "  dump              print all " << MEM_SIZE << " bytes\n"
               << "  get <addr>        show one byte four ways\n"
               << "  set <addr> <val>  write one byte (dec or 0x hex)\n"
+              << "  inc <addr>        add 1 to the byte at addr (wraps)\n"
               << "  help              this list\n"
               << "  quit              leave\n";
 }
@@ -74,7 +75,7 @@ int main() {
             } else {
                 show_byte(mem_get(mem, static_cast<std::size_t>(addr)));
             }
-        } else if (cmd == "set") {
+            } else if (cmd == "set") {
             std::string a, v;
             long addr = 0, value = 0;
             if (!(words >> a) || !(words >> v) || !parse_number(a, addr) ||
@@ -83,12 +84,23 @@ int main() {
             } else if (addr < 0) {
                 std::cout << "address must not be negative\n";
             } else if (value < 0 || value > 255) {
-                // A cell holds ONE byte. 256 does not fit. Lab 1, theory 3.
                 std::cout << "a byte is 0..255, got " << value << '\n';
             } else if (!mem_set(mem, static_cast<std::size_t>(addr),
                                 static_cast<Byte>(value))) {
                 std::cout << "address " << addr << " is outside 0.." << MEM_SIZE - 1
                           << '\n';
+            }
+        } else if (cmd == "inc") {
+            std::string a;
+            long addr = 0;
+            if (!(words >> a) || !parse_number(a, addr)) {
+                std::cout << "usage: inc <addr>\n";
+            } else if (addr < 0) {
+                std::cout << "address must not be negative\n";
+            } else {
+                std::size_t address = static_cast<std::size_t>(addr);
+                Byte value = mem_get(mem, address);
+                mem_set(mem, address, static_cast<Byte>(value + 1));  // wrap
             }
         } else {
             std::cout << "unknown command: " << cmd << " (try `help`)\n";
